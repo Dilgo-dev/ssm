@@ -17,6 +17,7 @@ const (
 	ActionConnect
 	ActionAdd
 	ActionKeys
+	ActionSettings
 )
 
 type ListModel struct {
@@ -84,16 +85,37 @@ func (m ListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ListModel) handleNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
+	vim := config.LoadSettings().VimKeys
+	key := msg.String()
+
+	switch key {
 	case "q", "ctrl+c":
 		return m, tea.Quit
-	case "up", "k":
+	case "up":
 		if m.cursor > 0 {
 			m.cursor--
 		}
-	case "down", "j":
+	case "down":
 		if m.cursor < len(m.connections)-1 {
 			m.cursor++
+		}
+	case "k":
+		if vim {
+			if m.cursor > 0 {
+				m.cursor--
+			}
+		} else {
+			m.Action = ActionKeys
+			return m, tea.Quit
+		}
+	case "j":
+		if vim && m.cursor < len(m.connections)-1 {
+			m.cursor++
+		}
+	case "K":
+		if vim {
+			m.Action = ActionKeys
+			return m, tea.Quit
 		}
 	case "enter":
 		if len(m.connections) > 0 {
@@ -111,8 +133,8 @@ func (m ListModel) handleNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		m.searching = true
 		m.search = ""
-	case "K":
-		m.Action = ActionKeys
+	case "s":
+		m.Action = ActionSettings
 		return m, tea.Quit
 	}
 	return m, nil
@@ -260,12 +282,17 @@ func (m ListModel) View() string {
 			footerItem("esc", "cancel"),
 		))
 	} else if m.deleting < 0 {
+		keysKey := "K"
+		if !config.LoadSettings().VimKeys {
+			keysKey = "k"
+		}
 		content.WriteString(footerBar(
 			footerItem("enter", "connect"),
 			footerItem("a", "add"),
 			footerItem("d", "delete"),
 			footerItem("/", "search"),
-			footerItem("K", "keys"),
+			footerItem(keysKey, "keys"),
+			footerItem("s", "settings"),
 			footerItem("q", "quit"),
 		))
 	}

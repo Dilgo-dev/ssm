@@ -52,15 +52,24 @@ func (m KeysModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m KeysModel) handleNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	vim := config.LoadSettings().VimKeys
 	switch msg.String() {
 	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
-	case "up", "k":
+	case "up":
 		if m.cursor > 0 {
 			m.cursor--
 		}
-	case "down", "j":
+	case "down":
 		if m.cursor < len(m.vault.Keys)-1 {
+			m.cursor++
+		}
+	case "k":
+		if vim && m.cursor > 0 {
+			m.cursor--
+		}
+	case "j":
+		if vim && m.cursor < len(m.vault.Keys)-1 {
 			m.cursor++
 		}
 	case "a":

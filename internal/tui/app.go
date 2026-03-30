@@ -17,6 +17,7 @@ const (
 	stateKeys
 	stateAddKey
 	stateAddKeyFromConn
+	stateSettings
 )
 
 type AppResult struct {
@@ -32,6 +33,7 @@ type AppModel struct {
 	form       FormModel
 	savedForm  FormModel
 	keys       KeysModel
+	settings   SettingsModel
 	vault      *config.Vault
 	masterPass string
 	editIdx    int
@@ -72,6 +74,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateAddKey(msg)
 	case stateAddKeyFromConn:
 		return m.updateAddKeyFromConn(msg)
+	case stateSettings:
+		return m.updateSettings(msg)
 	}
 	return m, nil
 }
@@ -96,6 +100,13 @@ func (m AppModel) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.keys = NewKeysModel(m.vault, m.masterPass)
 		m.keys.width = m.width
 		m.keys.height = m.height
+		return m, nil
+	case ActionSettings:
+		m.list.Action = ActionNone
+		m.state = stateSettings
+		m.settings = NewSettingsModel(config.LoadSettings())
+		m.settings.width = m.width
+		m.settings.height = m.height
 		return m, nil
 	}
 
@@ -156,6 +167,21 @@ func (m AppModel) updateKeys(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if key, ok := msg.(tea.KeyMsg); ok {
 		str := key.String()
 		if (str == "q" || str == "ctrl+c" || str == "esc") && m.keys.deleting < 0 {
+			m.goToList()
+			return m, nil
+		}
+	}
+
+	return m, nil
+}
+
+func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
+	updated, _ := m.settings.Update(msg)
+	m.settings = updated.(SettingsModel)
+
+	if key, ok := msg.(tea.KeyMsg); ok {
+		if key.String() == "esc" || key.String() == "q" || key.String() == "ctrl+c" {
+			config.SaveSettings(m.settings.Settings())
 			m.goToList()
 			return m, nil
 		}
@@ -345,6 +371,8 @@ func (m AppModel) View() string {
 		return m.keys.View()
 	case stateAddKey, stateAddKeyFromConn:
 		return m.form.View()
+	case stateSettings:
+		return m.settings.View()
 	}
 	return ""
 }

@@ -95,7 +95,22 @@ func unlock() {
 		masterPass = string(pass1)
 		config.Save(&config.Vault{}, masterPass)
 		fmt.Println("Vault created.")
+		settings := config.LoadSettings()
+		if settings.PasswordCache == "session" {
+			config.CachePassword(masterPass)
+		}
 		return
+	}
+
+	settings := config.LoadSettings()
+	if settings.PasswordCache == "session" {
+		if cached := config.GetCachedPassword(); cached != "" {
+			if _, err := config.Load(cached); err == nil {
+				masterPass = cached
+				return
+			}
+			config.ClearPasswordCache()
+		}
 	}
 
 	for attempts := 0; attempts < 3; attempts++ {
@@ -109,6 +124,9 @@ func unlock() {
 		_, err = config.Load(string(pass))
 		if err == nil {
 			masterPass = string(pass)
+			if settings.PasswordCache == "session" {
+				config.CachePassword(masterPass)
+			}
 			return
 		}
 		if err == vault.ErrWrongPassword {
