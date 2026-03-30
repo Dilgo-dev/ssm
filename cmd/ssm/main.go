@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 
 	"golang.org/x/term"
@@ -29,6 +30,7 @@ Usage:
   ssm add              add a new connection
   ssm edit <name>      edit a connection
   ssm remove <name>    remove a connection
+  ssm exec <name> <cmd> run a command on a remote server
   ssm keys             list saved SSH keys
   ssm keys add         add a new SSH key
   ssm keys remove <n>  remove a SSH key
@@ -84,6 +86,13 @@ Shortcuts (in TUI):
 		} else {
 			runKeysList()
 		}
+	case "exec":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage: ssm exec <name> <command>")
+			os.Exit(1)
+		}
+		unlock()
+		runExec(os.Args[2], strings.Join(os.Args[3:], " "))
 	case "register":
 		runRegister()
 	case "login":

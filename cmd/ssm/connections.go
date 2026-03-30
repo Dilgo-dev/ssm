@@ -139,6 +139,22 @@ func runRemove(name string) {
 	fmt.Printf("Connection \"%s\" removed.\n", name)
 }
 
+func runExec(name, cmd string) {
+	v, err := config.Load(masterPass)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	for _, c := range v.Connections {
+		if c.Name == name {
+			os.Exit(ssh.Exec(c, v, cmd))
+		}
+	}
+	fmt.Printf("Connection \"%s\" not found.\n", name)
+	os.Exit(1)
+}
+
 func runEdit(name string) {
 	v, err := config.Load(masterPass)
 	if err != nil {
