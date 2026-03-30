@@ -31,7 +31,7 @@ func NewSettingsModel(s *config.Settings) SettingsModel {
 				value:   s.PasswordCache,
 			},
 			{
-				label:   "Vim keys",
+				label:   "ThePrimeagen mode (vim keybind)",
 				options: []string{"on", "off"},
 				value:   boolToOnOff(s.VimKeys),
 			},
@@ -111,14 +111,17 @@ func (m SettingsModel) View() string {
 	content.WriteString(titleStyle.Render("  Settings"))
 	content.WriteString("\n\n")
 
+	settingsLabel := fieldLabel.Width(34)
+	settingsLabelActive := fieldLabelActive.Width(34)
+
 	for i, f := range m.fields {
 		active := i == m.cursor
 
 		var labelStr string
 		if active {
-			labelStr = fieldLabelActive.Render(f.label)
+			labelStr = settingsLabelActive.Render(f.label)
 		} else {
-			labelStr = fieldLabel.Render(f.label)
+			labelStr = settingsLabel.Render(f.label)
 		}
 
 		var valueStr string

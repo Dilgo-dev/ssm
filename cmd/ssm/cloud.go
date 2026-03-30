@@ -1,34 +1,47 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 
-	"golang.org/x/term"
+	tea "github.com/charmbracelet/bubbletea"
 
 	"ssm/internal/cloud"
+	"ssm/internal/tui"
 )
 
-func prompt(label string) string {
-	fmt.Printf("%s: ", label)
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	return scanner.Text()
-}
-
-func promptSecret(label string) string {
-	fmt.Printf("%s: ", label)
-	pass, _ := term.ReadPassword(int(os.Stdin.Fd()))
-	fmt.Println()
-	return string(pass)
-}
+const defaultServer = "https://api.gossm.sh"
 
 func runRegister() {
-	server := prompt("Server URL")
-	email := prompt("Email")
-	password := promptSecret("Password")
+	fields := []tui.Field{
+		{Label: "Server", Value: defaultServer},
+		{Label: "Email", Required: true},
+		{Label: "Password", Required: true, Password: true},
+		{Label: "Confirm", Required: true, Password: true},
+	}
 
+	p := tea.NewProgram(tui.NewFormModel("Create account", fields), tea.WithAltScreen())
+	result, err := p.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fm := result.(tui.FormModel)
+	if fm.Canceled || !fm.Done {
+		return
+	}
+
+	password := fm.GetValue("Password")
+	if password != fm.GetValue("Confirm") {
+		fmt.Fprintln(os.Stderr, "Passwords do not match.")
+		os.Exit(1)
+	}
+
+	server := fm.GetValue("Server")
+	email := fm.GetValue("Email")
+
+	fmt.Println("Creating account...")
 	token, err := cloud.Register(server, email, password)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -36,14 +49,33 @@ func runRegister() {
 	}
 
 	_ = cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token})
-	fmt.Println("Account created and logged in.")
+	fmt.Println("Account created. Check your email to verify your account.")
 }
 
 func runLogin() {
-	server := prompt("Server URL")
-	email := prompt("Email")
-	password := promptSecret("Password")
+	fields := []tui.Field{
+		{Label: "Server", Value: defaultServer},
+		{Label: "Email", Required: true},
+		{Label: "Password", Required: true, Password: true},
+	}
 
+	p := tea.NewProgram(tui.NewFormModel("Login", fields), tea.WithAltScreen())
+	result, err := p.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fm := result.(tui.FormModel)
+	if fm.Canceled || !fm.Done {
+		return
+	}
+
+	server := fm.GetValue("Server")
+	email := fm.GetValue("Email")
+	password := fm.GetValue("Password")
+
+	fmt.Println("Logging in...")
 	token, err := cloud.Login(server, email, password)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

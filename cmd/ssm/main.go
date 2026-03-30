@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
-	"golang.org/x/term"
+	tea "github.com/charmbracelet/bubbletea"
 
 	"ssm/internal/config"
+	"ssm/internal/tui"
 	"ssm/internal/update"
 	"ssm/internal/vault"
 )
@@ -18,6 +20,21 @@ var (
 )
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			buf := make([]byte, 4096)
+			n := runtime.Stack(buf, false)
+			fmt.Fprintf(os.Stderr, "\n\033[1;31mssm crashed!\033[0m\n\n")
+			fmt.Fprintf(os.Stderr, "Version: %s\n", version)
+			fmt.Fprintf(os.Stderr, "OS:      %s/%s\n", runtime.GOOS, runtime.GOARCH)
+			fmt.Fprintf(os.Stderr, "Error:   %v\n\n", r)
+			fmt.Fprintf(os.Stderr, "Stack trace:\n%s\n\n", buf[:n])
+			fmt.Fprintf(os.Stderr, "Please report this at:\n")
+			fmt.Fprintf(os.Stderr, "  https://github.com/Dilgo-dev/ssm/issues\n\n")
+			fmt.Fprintf(os.Stderr, "Include the info above in your report.\n")
+		}
+	}()
+
 	if len(os.Args) < 2 {
 		checkUpdate()
 		unlock()
@@ -145,25 +162,18 @@ func showUpdateNotice() {
 
 func unlock() {
 	if !config.Exists() {
-		fmt.Print("Create a master password: ")
-		pass1, err := term.ReadPassword(int(os.Stdin.Fd()))
-		fmt.Println()
-		if err != nil || len(pass1) == 0 {
-			fmt.Fprintln(os.Stderr, "Password required.")
+		p := tea.NewProgram(tui.NewUnlockModel(tui.UnlockCreate), tea.WithAltScreen())
+		result, err := p.Run()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-
-		fmt.Print("Confirm password: ")
-		pass2, err := term.ReadPassword(int(os.Stdin.Fd()))
-		fmt.Println()
-		if err != nil || string(pass1) != string(pass2) {
-			fmt.Fprintln(os.Stderr, "Passwords do not match.")
-			os.Exit(1)
+		m := result.(tui.UnlockModel)
+		if m.Canceled {
+			os.Exit(0)
 		}
-
-		masterPass = string(pass1)
+		masterPass = m.Password
 		_ = config.Save(&config.Vault{}, masterPass)
-		fmt.Println("Vault created.")
 		settings := config.LoadSettings()
 		if settings.PasswordCache == "session" {
 			config.CachePassword(masterPass)
@@ -183,27 +193,30 @@ func unlock() {
 	}
 
 	for attempts := 0; attempts < 3; attempts++ {
-		fmt.Print("Master password: ")
-		pass, err := term.ReadPassword(int(os.Stdin.Fd()))
-		fmt.Println()
+		m := tui.NewUnlockModel(tui.UnlockLogin)
+		p := tea.NewProgram(m, tea.WithAltScreen())
+		result, err := p.Run()
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
+		um := result.(tui.UnlockModel)
+		if um.Canceled {
+			os.Exit(0)
+		}
 
-		_, err = config.Load(string(pass))
+		_, err = config.Load(um.Password)
 		if err == nil {
-			masterPass = string(pass)
+			masterPass = um.Password
 			if settings.PasswordCache == "session" {
 				config.CachePassword(masterPass)
 			}
 			return
 		}
-		if err == vault.ErrWrongPassword {
-			fmt.Fprintln(os.Stderr, "Wrong password.")
-			continue
+		if err != vault.ErrWrongPassword {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
 	}
 
 	fmt.Fprintln(os.Stderr, "Too many attempts.")

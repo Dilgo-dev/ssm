@@ -105,8 +105,22 @@ func Download() error {
 	}
 
 	ClearFlag()
-	fmt.Printf("Updated to %s\n", latest)
+	printBanner(latest)
 	return nil
+}
+
+func printBanner(ver string) {
+	purple := "\033[35m"
+	reset := "\033[0m"
+	fmt.Printf("%s", purple)
+	fmt.Println(` _____ ________  ___`)
+	fmt.Println(`/  ___/  ___|  \/  |`)
+	fmt.Println(`\ ` + "`" + `--.\ ` + "`" + `--.| .  . |`)
+	fmt.Println("  `--. \\`--. \\ |\\/| |")
+	fmt.Println(`/\__/ /\__/ / |  | |`)
+	fmt.Println(`\____/\____/\_|  |_/`)
+	fmt.Printf("%s\n", reset)
+	fmt.Printf("  Updated to %s%s%s\n", purple, ver, reset)
 }
 
 func shouldCheck() bool {

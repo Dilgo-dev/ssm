@@ -18,6 +18,9 @@ linters-settings:
     rules:
       - name: exported
         disabled: true
+  gocritic:
+    disabled-checks:
+      - exitAfterDefer
 
 run:
   timeout: 2m
