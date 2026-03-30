@@ -20,7 +20,7 @@ func prompt(label string) string {
 
 func promptSecret(label string) string {
 	fmt.Printf("%s: ", label)
-	pass, _ := term.ReadPassword(int(syscall.Stdin))
+	pass, _ := term.ReadPassword(syscall.Stdin)
 	fmt.Println()
 	return string(pass)
 }
@@ -36,7 +36,7 @@ func runRegister() {
 		os.Exit(1)
 	}
 
-	cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token})
+	_ = cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token})
 	fmt.Println("Account created and logged in.")
 }
 
@@ -51,7 +51,7 @@ func runLogin() {
 		os.Exit(1)
 	}
 
-	cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token})
+	_ = cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token})
 	fmt.Println("Logged in.")
 }
 

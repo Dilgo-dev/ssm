@@ -3,14 +3,11 @@ package tui
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	accent    = lipgloss.Color("#8B5CF6")
-	accentDim = lipgloss.Color("#6D28D9")
-	white     = lipgloss.Color("#E4E4E7")
-	dim       = lipgloss.Color("#71717A")
-	dimmer    = lipgloss.Color("#52525B")
-	surface   = lipgloss.Color("#18181B")
-	red       = lipgloss.Color("#EF4444")
-	green     = lipgloss.Color("#22C55E")
+	accent = lipgloss.Color("#8B5CF6")
+	white  = lipgloss.Color("#E4E4E7")
+	dim    = lipgloss.Color("#71717A")
+	dimmer = lipgloss.Color("#52525B")
+	red    = lipgloss.Color("#EF4444")
 
 	boxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -58,9 +55,6 @@ var (
 			Foreground(red).
 			Bold(true)
 
-	successStyle = lipgloss.NewStyle().
-			Foreground(green)
-
 	fieldLabel = lipgloss.NewStyle().
 			Width(16).
 			Foreground(dim)
@@ -89,12 +83,6 @@ var (
 				Border(lipgloss.NormalBorder(), false, false, true, false).
 				BorderForeground(lipgloss.Color("#3F3F46")).
 				PaddingBottom(0)
-
-	badge = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#18181B")).
-		Background(accent).
-		Bold(true).
-		Padding(0, 1)
 )
 
 func footerItem(key, label string) string {

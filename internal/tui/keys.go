@@ -87,7 +87,7 @@ func (m KeysModel) handleDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y":
 		m.vault.Keys = append(m.vault.Keys[:m.deleting], m.vault.Keys[m.deleting+1:]...)
-		config.Save(m.vault, m.masterPass)
+		_ = config.Save(m.vault, m.masterPass)
 		m.deleting = -1
 		if m.cursor >= len(m.vault.Keys) && m.cursor > 0 {
 			m.cursor--

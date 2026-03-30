@@ -11,14 +11,14 @@ import (
 )
 
 const (
-	version    = 1
-	saltLen    = 16
-	nonceLen   = 12
-	keyLen     = 32
-	headerLen  = 1 + saltLen + nonceLen
-	argonTime  = 3
-	argonMem   = 64 * 1024
-	argonPar   = 4
+	version   = 1
+	saltLen   = 16
+	nonceLen  = 12
+	keyLen    = 32
+	headerLen = 1 + saltLen + nonceLen
+	argonTime = 3
+	argonMem  = 64 * 1024
+	argonPar  = 4
 )
 
 var ErrWrongPassword = errors.New("wrong password or corrupted file")

@@ -198,21 +198,22 @@ func (m FormModel) View() string {
 		}
 
 		var valueStr string
-		if f.Options != nil {
+		switch {
+		case f.Options != nil:
 			if active {
 				valueStr = fieldCursor.Render("< ") + fieldValue.Render(f.Value) + fieldCursor.Render(" >")
 			} else {
 				valueStr = fieldValue.Render(f.Value)
 			}
-		} else if f.Value == "" {
+		case f.Value == "":
 			if f.Placeholder != "" {
 				valueStr = fieldPlaceholder.Render(f.Placeholder)
 			} else {
 				valueStr = fieldPlaceholder.Render("...")
 			}
-		} else if f.Password {
+		case f.Password:
 			valueStr = fieldValue.Render(strings.Repeat("*", len(f.Value)))
-		} else {
+		default:
 			valueStr = fieldValue.Render(f.Value)
 		}
 

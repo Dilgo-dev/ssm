@@ -58,10 +58,7 @@ func nativeConnect(c config.Connection, v *config.Vault) error {
 	}
 	addr := net.JoinHostPort(c.Host, strconv.Itoa(port))
 
-	hostKeyCallback, err := buildHostKeyCallback(c)
-	if err != nil {
-		return err
-	}
+	hostKeyCallback := buildHostKeyCallback()
 
 	cfg := &ssh.ClientConfig{
 		User:            c.User,
@@ -89,7 +86,7 @@ func nativeConnect(c config.Connection, v *config.Vault) error {
 	if err != nil {
 		return fmt.Errorf("terminal raw mode: %w", err)
 	}
-	defer term.Restore(int(os.Stdin.Fd()), oldState)
+	defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }()
 
 	width, height, _ := term.GetSize(int(os.Stdout.Fd()))
 
@@ -112,7 +109,7 @@ func nativeConnect(c config.Connection, v *config.Vault) error {
 	go func() {
 		for range sigChan {
 			w, h, _ := term.GetSize(int(os.Stdout.Fd()))
-			session.WindowChange(h, w)
+			_ = session.WindowChange(h, w)
 		}
 	}()
 	defer signal.Stop(sigChan)
@@ -121,7 +118,7 @@ func nativeConnect(c config.Connection, v *config.Vault) error {
 		return fmt.Errorf("shell: %w", err)
 	}
 
-	session.Wait()
+	_ = session.Wait()
 	return nil
 }
 
@@ -147,17 +144,17 @@ func buildAuth(c config.Connection, v *config.Vault) ([]ssh.AuthMethod, error) {
 	return methods, nil
 }
 
-func buildHostKeyCallback(c config.Connection) (ssh.HostKeyCallback, error) {
+func buildHostKeyCallback() ssh.HostKeyCallback {
 	home, _ := os.UserHomeDir()
 	knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
 
 	if _, err := os.Stat(knownHostsPath); err != nil {
-		return acceptAndSaveHostKey(knownHostsPath), nil
+		return acceptAndSaveHostKey(knownHostsPath)
 	}
 
 	cb, err := knownhosts.New(knownHostsPath)
 	if err != nil {
-		return acceptAndSaveHostKey(knownHostsPath), nil
+		return acceptAndSaveHostKey(knownHostsPath)
 	}
 
 	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
@@ -170,7 +167,7 @@ func buildHostKeyCallback(c config.Connection) (ssh.HostKeyCallback, error) {
 			return err
 		}
 		return saveHostKey(knownHostsPath, hostname, key)
-	}, nil
+	}
 }
 
 func acceptAndSaveHostKey(path string) ssh.HostKeyCallback {
@@ -180,7 +177,7 @@ func acceptAndSaveHostKey(path string) ssh.HostKeyCallback {
 }
 
 func saveHostKey(path, hostname string, key ssh.PublicKey) error {
-	os.MkdirAll(filepath.Dir(path), 0700)
+	_ = os.MkdirAll(filepath.Dir(path), 0700)
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
@@ -197,7 +194,7 @@ func isHostKeyError(err error) bool {
 }
 
 func shellConnect(c config.Connection) {
-	cmd := exec.Command("ssh", c.SSHArgs()...)
+	cmd := exec.Command("ssh", c.SSHArgs()...) //nolint:gosec
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 
@@ -229,7 +226,7 @@ func handleHostKeyFailure(c config.Connection, v *config.Vault) {
 		rm := exec.Command("ssh-keygen", "-R", host)
 		rm.Stdout = os.Stdout
 		rm.Stderr = os.Stderr
-		rm.Run()
+		_ = rm.Run()
 		fmt.Println("  Reconnecting...")
 		Connect(c, v)
 	}

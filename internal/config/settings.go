@@ -46,7 +46,7 @@ func LoadSettings() *Settings {
 }
 
 func SaveSettings(s *Settings) error {
-	os.MkdirAll(Dir(), 0700)
+	_ = os.MkdirAll(Dir(), 0700)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func CachePassword(password string) {
 	if err != nil {
 		return
 	}
-	os.WriteFile(cachePath(), encrypted, 0600)
+	_ = os.WriteFile(cachePath(), encrypted, 0600)
 }
 
 func GetCachedPassword() string {

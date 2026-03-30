@@ -189,7 +189,7 @@ func (m ListModel) handleDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.vault.Connections = m.allConns
-		config.Save(m.vault, m.masterPass)
+		_ = config.Save(m.vault, m.masterPass)
 		m.deleting = -1
 		m.applyFilter()
 	case "n", "escape":
@@ -228,14 +228,12 @@ func (m ListModel) View() string {
 		for i, c := range m.connections {
 			selected := i == m.cursor
 
-			icon := "  "
-			var nameStr, detailStr, portStr string
+			var icon, nameStr, detailStr, portStr string
 
-			if c.Password != "" {
+			switch {
+			case c.Password != "", c.KeyName != "":
 				portStr = " "
-			} else if c.KeyName != "" {
-				portStr = " "
-			} else {
+			default:
 				portStr = " "
 			}
 

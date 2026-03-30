@@ -181,7 +181,7 @@ func (m AppModel) updateSettings(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if key, ok := msg.(tea.KeyMsg); ok {
 		if key.String() == "esc" || key.String() == "q" || key.String() == "ctrl+c" {
-			config.SaveSettings(m.settings.Settings())
+			_ = config.SaveSettings(m.settings.Settings())
 			m.goToList()
 			return m, nil
 		}
@@ -324,7 +324,7 @@ func (m *AppModel) saveNewConn() {
 		Password: m.form.GetValue("Password"),
 		KeyName:  keyName,
 	})
-	config.Save(m.vault, m.masterPass)
+	_ = config.Save(m.vault, m.masterPass)
 }
 
 func (m *AppModel) saveEditConn() {
@@ -342,7 +342,7 @@ func (m *AppModel) saveEditConn() {
 	c.User = m.form.GetValue("User")
 	c.Password = m.form.GetValue("Password")
 	c.KeyName = keyName
-	config.Save(m.vault, m.masterPass)
+	_ = config.Save(m.vault, m.masterPass)
 }
 
 func (m *AppModel) saveKey() string {
@@ -357,7 +357,7 @@ func (m *AppModel) saveKey() string {
 		Name:       name,
 		PrivateKey: content,
 	})
-	config.Save(m.vault, m.masterPass)
+	_ = config.Save(m.vault, m.masterPass)
 	return name
 }
 

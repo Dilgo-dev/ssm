@@ -112,10 +112,7 @@ func (m *SessionManager) AddSession(c config.Connection, v *config.Vault) error 
 		port = 22
 	}
 
-	hostKeyCallback, err := buildHostKeyCallback(c)
-	if err != nil {
-		return err
-	}
+	hostKeyCallback := buildHostKeyCallback()
 
 	client, err := ssh.Dial("tcp", net.JoinHostPort(c.Host, strconv.Itoa(port)), &ssh.ClientConfig{
 		User:            c.User,
@@ -201,7 +198,7 @@ func (m *SessionManager) readOutput(s *SSHSession) {
 	for {
 		n, err := s.stdout.Read(buf)
 		if n > 0 {
-			s.buf.Write(buf[:n])
+			_, _ = s.buf.Write(buf[:n])
 
 			m.mu.Lock()
 			isActive := len(m.sessions) > 0 && m.active < len(m.sessions) && m.sessions[m.active] == s
@@ -224,7 +221,7 @@ func (m *SessionManager) readOutput(s *SSHSession) {
 }
 
 func (m *SessionManager) waitSession(s *SSHSession) {
-	s.session.Wait()
+	_ = s.session.Wait()
 	s.closed = true
 	close(s.done)
 
@@ -308,7 +305,7 @@ func (m *SessionManager) resize() {
 	}
 	for _, s := range m.sessions {
 		if !s.closed {
-			s.session.WindowChange(ptyH, w)
+			_ = s.session.WindowChange(ptyH, w)
 		}
 	}
 	m.setScrollRegion()
@@ -348,7 +345,7 @@ func (m *SessionManager) Run() {
 	signal.Stop(sigChan)
 	m.resetScrollRegion()
 	fmt.Print("\033[2J\033[H")
-	term.Restore(int(os.Stdin.Fd()), m.oldState)
+	_ = term.Restore(int(os.Stdin.Fd()), m.oldState)
 	m.running = false
 }
 
@@ -389,7 +386,7 @@ func (m *SessionManager) forwardToActive(data []byte) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if len(m.sessions) > 0 && m.active < len(m.sessions) {
-		m.sessions[m.active].stdin.Write(data)
+		_, _ = m.sessions[m.active].stdin.Write(data)
 	}
 }
 
@@ -426,7 +423,7 @@ func (m *SessionManager) handleCommand(cmd byte) {
 
 func (m *SessionManager) openPicker() {
 	m.resetScrollRegion()
-	term.Restore(int(os.Stdin.Fd()), m.oldState)
+	_ = term.Restore(int(os.Stdin.Fd()), m.oldState)
 	fmt.Print("\033[2J\033[H")
 
 	conn := m.picker()

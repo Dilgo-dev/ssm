@@ -78,7 +78,7 @@ func Exists() bool {
 }
 
 func Load(masterPass string) (*Vault, error) {
-	os.MkdirAll(Dir(), 0700)
+	_ = os.MkdirAll(Dir(), 0700)
 	data, err := os.ReadFile(Path())
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -107,7 +107,7 @@ func Load(masterPass string) (*Vault, error) {
 }
 
 func Save(v *Vault, masterPass string) error {
-	os.MkdirAll(Dir(), 0700)
+	_ = os.MkdirAll(Dir(), 0700)
 	plaintext, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err

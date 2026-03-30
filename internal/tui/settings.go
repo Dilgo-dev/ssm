@@ -63,7 +63,7 @@ func (m SettingsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc", "q", "ctrl+c":
-			config.SaveSettings(m.Settings())
+			_ = config.SaveSettings(m.Settings())
 			return m, tea.Quit
 		case "up", "k":
 			if m.cursor > 0 {

@@ -125,7 +125,7 @@ func Pull(cfg *CloudConfig) error {
 		return err
 	}
 
-	os.MkdirAll(config.Dir(), 0700)
+	_ = os.MkdirAll(config.Dir(), 0700)
 	return os.WriteFile(config.Path(), data, 0600)
 }
 

@@ -77,7 +77,7 @@ func main() {
 func unlock() {
 	if !config.Exists() {
 		fmt.Print("Create a master password: ")
-		pass1, err := term.ReadPassword(int(syscall.Stdin))
+		pass1, err := term.ReadPassword(syscall.Stdin)
 		fmt.Println()
 		if err != nil || len(pass1) == 0 {
 			fmt.Fprintln(os.Stderr, "Password required.")
@@ -85,7 +85,7 @@ func unlock() {
 		}
 
 		fmt.Print("Confirm password: ")
-		pass2, err := term.ReadPassword(int(syscall.Stdin))
+		pass2, err := term.ReadPassword(syscall.Stdin)
 		fmt.Println()
 		if err != nil || string(pass1) != string(pass2) {
 			fmt.Fprintln(os.Stderr, "Passwords do not match.")
@@ -93,7 +93,7 @@ func unlock() {
 		}
 
 		masterPass = string(pass1)
-		config.Save(&config.Vault{}, masterPass)
+		_ = config.Save(&config.Vault{}, masterPass)
 		fmt.Println("Vault created.")
 		settings := config.LoadSettings()
 		if settings.PasswordCache == "session" {
@@ -115,7 +115,7 @@ func unlock() {
 
 	for attempts := 0; attempts < 3; attempts++ {
 		fmt.Print("Master password: ")
-		pass, err := term.ReadPassword(int(syscall.Stdin))
+		pass, err := term.ReadPassword(syscall.Stdin)
 		fmt.Println()
 		if err != nil {
 			os.Exit(1)
