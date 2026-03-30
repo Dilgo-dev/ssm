@@ -142,6 +142,31 @@ func parseTokenResponse(resp *http.Response) (string, error) {
 	return result.Token, nil
 }
 
+func CheckVerified(cfg *CloudConfig) bool {
+	req, err := http.NewRequest("GET", cfg.Server+"/auth/status", nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Authorization", "Bearer "+cfg.Token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return false
+	}
+	var result struct {
+		Verified bool `json:"verified"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return false
+	}
+	return result.Verified
+}
+
 func parseError(resp *http.Response) error {
 	var result struct {
 		Error string `json:"error"`

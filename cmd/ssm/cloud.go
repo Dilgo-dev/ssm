@@ -48,8 +48,25 @@ func runRegister() {
 		os.Exit(1)
 	}
 
-	_ = cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token})
-	fmt.Println("Account created. Check your email to verify your account.")
+	cfg := &cloud.CloudConfig{Server: server, Token: token}
+	_ = cloud.SaveCloud(cfg)
+
+	check := func() bool {
+		return cloud.CheckVerified(cfg)
+	}
+
+	vp := tea.NewProgram(tui.NewVerifyModel(email, check), tea.WithAltScreen())
+	vResult, err := vp.Run()
+	if err != nil {
+		fmt.Println("Account created. Check your email to verify your account.")
+		return
+	}
+	vm := vResult.(tui.VerifyModel)
+	if vm.Verified() {
+		fmt.Println("Account verified and ready.")
+	} else {
+		fmt.Println("Account created. Verify your email to use cloud sync.")
+	}
 }
 
 func runLogin() {
