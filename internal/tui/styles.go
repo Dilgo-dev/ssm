@@ -9,11 +9,6 @@ var (
 	dimmer = lipgloss.Color("#52525B")
 	red    = lipgloss.Color("#EF4444")
 
-	boxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#3F3F46")).
-			Padding(1, 2)
-
 	titleStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(accent)

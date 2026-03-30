@@ -142,10 +142,10 @@ func (m SettingsModel) View() string {
 		footerItem("esc", "back"),
 	))
 
-	box := boxStyle.Width(58).Render(content.String())
+	out := lipgloss.NewStyle().Padding(1, 3).Render(content.String())
 
 	if m.width > 0 {
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, box)
+		return lipgloss.Place(m.width, m.height, lipgloss.Left, lipgloss.Top, out)
 	}
-	return box
+	return out
 }

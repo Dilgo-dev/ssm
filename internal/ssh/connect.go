@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -105,7 +104,7 @@ func nativeConnect(c config.Connection, v *config.Vault) error {
 	session.Stderr = os.Stderr
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGWINCH)
+	notifyResize(sigChan)
 	go func() {
 		for range sigChan {
 			w, h, _ := term.GetSize(int(os.Stdout.Fd()))

@@ -61,6 +61,7 @@ func runAdd() {
 		{Label: "Port", Value: "22", Placeholder: "22"},
 		{Label: "User", Required: true},
 		{Label: "Password", Password: true},
+		{Label: "Group"},
 		{Label: "SSH Key", Value: "(none)", Options: keyOptions()},
 	}
 
@@ -101,6 +102,7 @@ func runAdd() {
 		Port:     port,
 		User:     fm.GetValue("User"),
 		Password: fm.GetValue("Password"),
+		Group:    fm.GetValue("Group"),
 		KeyName:  keyName,
 	}
 
@@ -185,6 +187,7 @@ func runEdit(name string) {
 		{Label: "Port", Value: strconv.Itoa(c.Port), Placeholder: "22"},
 		{Label: "User", Value: c.User, Required: true},
 		{Label: "Password", Value: c.Password, Password: true},
+		{Label: "Group", Value: c.Group},
 		{Label: "SSH Key", Value: keyVal, Options: keyOptions()},
 	}
 
@@ -214,6 +217,7 @@ func runEdit(name string) {
 	c.Port = port
 	c.User = fm.GetValue("User")
 	c.Password = fm.GetValue("Password")
+	c.Group = fm.GetValue("Group")
 	c.KeyName = keyName
 
 	v.Connections[found] = c

@@ -22,6 +22,7 @@ type Connection struct {
 	User     string `json:"user"`
 	Password string `json:"password,omitempty"`
 	KeyName  string `json:"key_name,omitempty"`
+	Group    string `json:"group,omitempty"`
 }
 
 type Vault struct {
@@ -42,6 +43,18 @@ func (v *Vault) KeyNames() []string {
 	names := make([]string, len(v.Keys))
 	for i, k := range v.Keys {
 		names[i] = k.Name
+	}
+	return names
+}
+
+func (v *Vault) GroupNames() []string {
+	seen := make(map[string]bool)
+	var names []string
+	for _, c := range v.Connections {
+		if c.Group != "" && !seen[c.Group] {
+			seen[c.Group] = true
+			names = append(names, c.Group)
+		}
 	}
 	return names
 }

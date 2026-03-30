@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"golang.org/x/term"
 
@@ -54,8 +53,9 @@ Cloud (optional):
 
 Shortcuts (in TUI):
   enter       connect        /    search
-  a           add            d    delete
-  K or k      manage keys    s    settings
+  a           add            e    edit
+  d           delete         K/k  manage keys
+  s           settings
   Ctrl+T n    new tab        Ctrl+T 1-9  switch tab
   Ctrl+T w    close tab      Ctrl+T d    detach
 `)
@@ -146,7 +146,7 @@ func showUpdateNotice() {
 func unlock() {
 	if !config.Exists() {
 		fmt.Print("Create a master password: ")
-		pass1, err := term.ReadPassword(syscall.Stdin)
+		pass1, err := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Println()
 		if err != nil || len(pass1) == 0 {
 			fmt.Fprintln(os.Stderr, "Password required.")
@@ -154,7 +154,7 @@ func unlock() {
 		}
 
 		fmt.Print("Confirm password: ")
-		pass2, err := term.ReadPassword(syscall.Stdin)
+		pass2, err := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Println()
 		if err != nil || string(pass1) != string(pass2) {
 			fmt.Fprintln(os.Stderr, "Passwords do not match.")
@@ -184,7 +184,7 @@ func unlock() {
 
 	for attempts := 0; attempts < 3; attempts++ {
 		fmt.Print("Master password: ")
-		pass, err := term.ReadPassword(syscall.Stdin)
+		pass, err := term.ReadPassword(int(os.Stdin.Fd()))
 		fmt.Println()
 		if err != nil {
 			os.Exit(1)

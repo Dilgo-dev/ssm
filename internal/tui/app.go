@@ -94,6 +94,17 @@ func (m AppModel) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = stateAddConn
 		m.form = m.newConnForm()
 		return m, nil
+	case ActionEdit:
+		m.list.Action = ActionNone
+		for i, c := range m.vault.Connections {
+			if c.Name == m.list.Selected.Name {
+				m.editIdx = i
+				break
+			}
+		}
+		m.state = stateEditConn
+		m.form = m.newEditForm(m.vault.Connections[m.editIdx])
+		return m, nil
 	case ActionKeys:
 		m.list.Action = ActionNone
 		m.state = stateKeys
@@ -272,7 +283,26 @@ func (m *AppModel) newConnForm() FormModel {
 		{Label: "Port", Value: "22", Placeholder: "22"},
 		{Label: "User", Required: true},
 		{Label: "Password", Password: true},
+		{Label: "Group", Suggestions: m.vault.GroupNames()},
 		{Label: "SSH Key", Value: "(none)", Options: m.keyOpts()},
+	})
+	f.width = m.width
+	f.height = m.height
+	return f
+}
+
+func (m *AppModel) newEditForm(c config.Connection) FormModel {
+	keyVal := c.KeyName
+	if keyVal == "" {
+		keyVal = "(none)"
+	}
+	f := NewFormModel("Edit: "+c.Name, []Field{
+		{Label: "Host", Value: c.Host, Required: true},
+		{Label: "Port", Value: strconv.Itoa(c.Port), Placeholder: "22"},
+		{Label: "User", Value: c.User, Required: true},
+		{Label: "Password", Value: c.Password, Password: true},
+		{Label: "Group", Value: c.Group, Suggestions: m.vault.GroupNames()},
+		{Label: "SSH Key", Value: keyVal, Options: m.keyOpts()},
 	})
 	f.width = m.width
 	f.height = m.height
@@ -322,6 +352,7 @@ func (m *AppModel) saveNewConn() {
 		Port:     port,
 		User:     m.form.GetValue("User"),
 		Password: m.form.GetValue("Password"),
+		Group:    m.form.GetValue("Group"),
 		KeyName:  keyName,
 	})
 	_ = config.Save(m.vault, m.masterPass)
@@ -341,6 +372,7 @@ func (m *AppModel) saveEditConn() {
 	c.Port = port
 	c.User = m.form.GetValue("User")
 	c.Password = m.form.GetValue("Password")
+	c.Group = m.form.GetValue("Group")
 	c.KeyName = keyName
 	_ = config.Save(m.vault, m.masterPass)
 }

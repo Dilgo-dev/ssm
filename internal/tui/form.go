@@ -15,6 +15,20 @@ type Field struct {
 	Password    bool
 	Required    bool
 	Options     []string // if set, field becomes a select (left/right to cycle)
+	Suggestions []string // if set, autocomplete as user types
+}
+
+func (f *Field) matchingSuggestion() string {
+	if len(f.Suggestions) == 0 || f.Value == "" {
+		return ""
+	}
+	lower := strings.ToLower(f.Value)
+	for _, s := range f.Suggestions {
+		if strings.HasPrefix(strings.ToLower(s), lower) && strings.ToLower(s) != lower {
+			return s
+		}
+	}
+	return ""
 }
 
 type FormModel struct {
@@ -81,7 +95,10 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.err = ""
 			}
 		case "tab":
-			if m.cursor < len(m.Fields)-1 {
+			if suggestion := f.matchingSuggestion(); suggestion != "" {
+				f.Value = suggestion
+				m.err = ""
+			} else if m.cursor < len(m.Fields)-1 {
 				m.cursor++
 				m.err = ""
 			}
@@ -215,6 +232,11 @@ func (m FormModel) View() string {
 			valueStr = fieldValue.Render(strings.Repeat("*", len(f.Value)))
 		default:
 			valueStr = fieldValue.Render(f.Value)
+			if active {
+				if suggestion := f.matchingSuggestion(); suggestion != "" {
+					valueStr += fieldPlaceholder.Render(suggestion[len(f.Value):])
+				}
+			}
 		}
 
 		if active && f.Options == nil {
@@ -249,10 +271,10 @@ func (m FormModel) View() string {
 		footerItem("esc", "cancel"),
 	))
 
-	box := boxStyle.Width(58).Render(content.String())
+	out := lipgloss.NewStyle().Padding(1, 3).Render(content.String())
 
 	if m.width > 0 {
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, box)
+		return lipgloss.Place(m.width, m.height, lipgloss.Left, lipgloss.Top, out)
 	}
-	return box
+	return out
 }

@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"strconv"
 	"sync"
-	"syscall"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -327,7 +326,7 @@ func (m *SessionManager) Run() {
 	m.renderTabBar()
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGWINCH)
+	notifyResize(sigChan)
 	go func() {
 		for {
 			select {

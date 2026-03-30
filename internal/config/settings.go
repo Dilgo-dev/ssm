@@ -28,7 +28,7 @@ func settingsPath() string {
 }
 
 func cachePath() string {
-	return fmt.Sprintf("/tmp/ssm-cache-%d", os.Getuid())
+	return filepath.Join(os.TempDir(), fmt.Sprintf("ssm-cache-%s", userID()))
 }
 
 func LoadSettings() *Settings {
@@ -56,13 +56,13 @@ func SaveSettings(s *Settings) error {
 }
 
 func cacheKey() string {
-	machineID, _ := os.ReadFile("/etc/machine-id")
-	if len(machineID) == 0 {
-		machineID = []byte("fallback")
+	mid := machineID()
+	if len(mid) == 0 {
+		mid = []byte("fallback")
 	}
-	uid := strconv.Itoa(os.Getuid())
-	window := strconv.FormatInt(time.Now().Unix()/1800, 10) // 30 min window
-	h := sha256.Sum256([]byte(string(machineID) + uid + window))
+	uid := userID()
+	window := strconv.FormatInt(time.Now().Unix()/1800, 10)
+	h := sha256.Sum256([]byte(string(mid) + uid + window))
 	return hex.EncodeToString(h[:])
 }
 

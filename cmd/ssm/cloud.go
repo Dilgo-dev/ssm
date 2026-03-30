@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"syscall"
 
 	"golang.org/x/term"
 
@@ -20,7 +19,7 @@ func prompt(label string) string {
 
 func promptSecret(label string) string {
 	fmt.Printf("%s: ", label)
-	pass, _ := term.ReadPassword(syscall.Stdin)
+	pass, _ := term.ReadPassword(int(os.Stdin.Fd()))
 	fmt.Println()
 	return string(pass)
 }
