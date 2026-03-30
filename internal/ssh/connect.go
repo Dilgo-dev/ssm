@@ -22,6 +22,17 @@ import (
 	"ssm/internal/config"
 )
 
+func ConnectWithManager(c config.Connection, v *config.Vault, picker PickerFunc) {
+	fmt.Printf("Connecting to %s...\n", c.Display())
+
+	mgr := NewSessionManager(v, picker)
+	if err := mgr.AddSession(c, v); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+	mgr.Run()
+}
+
 func Connect(c config.Connection, v *config.Vault) {
 	fmt.Printf("Connecting to %s...\n", c.Display())
 

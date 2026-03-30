@@ -29,7 +29,17 @@ func runTUI() {
 
 		app := result.(tui.AppModel)
 		if app.Result.Connect != nil {
-			ssh.Connect(*app.Result.Connect, app.Result.ConnectV)
+			picker := func() *config.Connection {
+				v2, _ := config.Load(masterPass)
+				p2 := tea.NewProgram(tui.NewApp(v2, masterPass), tea.WithAltScreen())
+				r2, err := p2.Run()
+				if err != nil {
+					return nil
+				}
+				a2 := r2.(tui.AppModel)
+				return a2.Result.Connect
+			}
+			ssh.ConnectWithManager(*app.Result.Connect, app.Result.ConnectV, picker)
 			continue
 		}
 		break
