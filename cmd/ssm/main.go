@@ -21,6 +21,33 @@ func main() {
 	}
 
 	switch os.Args[1] {
+	case "--help", "-h", "help":
+		fmt.Print(`ssm - SSH connection manager
+
+Usage:
+  ssm                  open interactive connection list
+  ssm add              add a new connection
+  ssm edit <name>      edit a connection
+  ssm remove <name>    remove a connection
+  ssm keys             list saved SSH keys
+  ssm keys add         add a new SSH key
+  ssm keys remove <n>  remove a SSH key
+
+Cloud (optional):
+  ssm login            authenticate with sync server
+  ssm register         create a sync account
+  ssm push             upload encrypted vault
+  ssm pull             download encrypted vault
+  ssm logout           remove sync credentials
+
+Shortcuts (in TUI):
+  enter       connect        /    search
+  a           add            d    delete
+  K or k      manage keys    s    settings
+  Ctrl+T n    new tab        Ctrl+T 1-9  switch tab
+  Ctrl+T w    close tab      Ctrl+T d    detach
+`)
+		return
 	case "add":
 		unlock()
 		runAdd()
