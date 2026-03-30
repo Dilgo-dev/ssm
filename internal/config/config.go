@@ -94,7 +94,7 @@ func Load(masterPass string) (*Vault, error) {
 
 	// Try new Vault format first
 	var v Vault
-	if err := json.Unmarshal(plaintext, &v); err == nil && (v.Connections != nil || v.Keys != nil) {
+	if err := json.Unmarshal(plaintext, &v); err == nil {
 		return &v, nil
 	}
 
