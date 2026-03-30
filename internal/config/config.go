@@ -6,32 +6,50 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"ssm/internal/vault"
 )
 
+type SSHKey struct {
+	Name       string `json:"name"`
+	PrivateKey string `json:"private_key"`
+}
+
 type Connection struct {
-	Name         string `json:"name"`
-	Host         string `json:"host"`
-	Port         int    `json:"port"`
-	User         string `json:"user"`
-	Password     string `json:"password,omitempty"`
-	IdentityFile string `json:"identity_file,omitempty"`
+	Name     string `json:"name"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	User     string `json:"user"`
+	Password string `json:"password,omitempty"`
+	KeyName  string `json:"key_name,omitempty"`
+}
+
+type Vault struct {
+	Connections []Connection `json:"connections"`
+	Keys        []SSHKey     `json:"keys"`
+}
+
+func (v *Vault) GetKey(name string) *SSHKey {
+	for i, k := range v.Keys {
+		if k.Name == name {
+			return &v.Keys[i]
+		}
+	}
+	return nil
+}
+
+func (v *Vault) KeyNames() []string {
+	names := make([]string, len(v.Keys))
+	for i, k := range v.Keys {
+		names[i] = k.Name
+	}
+	return names
 }
 
 func (c Connection) SSHArgs() []string {
 	var args []string
 	if c.Port != 0 && c.Port != 22 {
 		args = append(args, "-p", strconv.Itoa(c.Port))
-	}
-	if c.IdentityFile != "" {
-		idFile := c.IdentityFile
-		if strings.HasPrefix(idFile, "~/") {
-			home, _ := os.UserHomeDir()
-			idFile = filepath.Join(home, idFile[2:])
-		}
-		args = append(args, "-i", idFile)
 	}
 	args = append(args, fmt.Sprintf("%s@%s", c.User, c.Host))
 	return args
@@ -59,12 +77,12 @@ func Exists() bool {
 	return err == nil
 }
 
-func Load(masterPass string) ([]Connection, error) {
+func Load(masterPass string) (*Vault, error) {
 	os.MkdirAll(Dir(), 0700)
 	data, err := os.ReadFile(Path())
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []Connection{}, nil
+			return &Vault{}, nil
 		}
 		return nil, err
 	}
@@ -74,16 +92,23 @@ func Load(masterPass string) ([]Connection, error) {
 		return nil, err
 	}
 
+	// Try new Vault format first
+	var v Vault
+	if err := json.Unmarshal(plaintext, &v); err == nil && (v.Connections != nil || v.Keys != nil) {
+		return &v, nil
+	}
+
+	// Migration: old format was just []Connection
 	var conns []Connection
 	if err := json.Unmarshal(plaintext, &conns); err != nil {
 		return nil, err
 	}
-	return conns, nil
+	return &Vault{Connections: conns}, nil
 }
 
-func Save(conns []Connection, masterPass string) error {
+func Save(v *Vault, masterPass string) error {
 	os.MkdirAll(Dir(), 0700)
-	plaintext, err := json.MarshalIndent(conns, "", "  ")
+	plaintext, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}

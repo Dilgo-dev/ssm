@@ -38,6 +38,25 @@ func main() {
 		}
 		unlock()
 		runEdit(os.Args[2])
+	case "keys":
+		unlock()
+		if len(os.Args) >= 3 {
+			switch os.Args[2] {
+			case "add":
+				runKeysAdd()
+			case "remove":
+				if len(os.Args) < 4 {
+					fmt.Println("Usage: ssm keys remove <name>")
+					os.Exit(1)
+				}
+				runKeysRemove(os.Args[3])
+			default:
+				fmt.Printf("Unknown keys command: %s\n", os.Args[2])
+				os.Exit(1)
+			}
+		} else {
+			runKeysList()
+		}
 	case "register":
 		runRegister()
 	case "login":
@@ -50,7 +69,7 @@ func main() {
 		runPull()
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
-		fmt.Println("Usage: ssm [add|remove|edit|login|register|push|pull|logout]")
+		fmt.Println("Usage: ssm [add|remove|edit|keys|login|register|push|pull|logout]")
 		os.Exit(1)
 	}
 }
@@ -74,7 +93,7 @@ func unlock() {
 		}
 
 		masterPass = string(pass1)
-		config.Save([]config.Connection{}, masterPass)
+		config.Save(&config.Vault{}, masterPass)
 		fmt.Println("Vault created.")
 		return
 	}

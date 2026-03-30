@@ -22,11 +22,11 @@ import (
 	"ssm/internal/config"
 )
 
-func Connect(c config.Connection) {
+func Connect(c config.Connection, v *config.Vault) {
 	fmt.Printf("Connecting to %s...\n", c.Display())
 
-	if c.Password != "" || c.IdentityFile != "" {
-		if err := nativeConnect(c); err != nil {
+	if c.Password != "" || c.KeyName != "" {
+		if err := nativeConnect(c, v); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		}
 		return
@@ -35,8 +35,8 @@ func Connect(c config.Connection) {
 	shellConnect(c)
 }
 
-func nativeConnect(c config.Connection) error {
-	auth, err := buildAuth(c)
+func nativeConnect(c config.Connection, v *config.Vault) error {
+	auth, err := buildAuth(c, v)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func nativeConnect(c config.Connection) error {
 	client, err := ssh.Dial("tcp", addr, cfg)
 	if err != nil {
 		if isHostKeyError(err) {
-			handleHostKeyFailure(c)
+			handleHostKeyFailure(c, v)
 			return nil
 		}
 		return fmt.Errorf("connection failed: %w", err)
@@ -114,20 +114,15 @@ func nativeConnect(c config.Connection) error {
 	return nil
 }
 
-func buildAuth(c config.Connection) ([]ssh.AuthMethod, error) {
+func buildAuth(c config.Connection, v *config.Vault) ([]ssh.AuthMethod, error) {
 	var methods []ssh.AuthMethod
 
-	if c.IdentityFile != "" {
-		idFile := c.IdentityFile
-		if strings.HasPrefix(idFile, "~/") {
-			home, _ := os.UserHomeDir()
-			idFile = filepath.Join(home, idFile[2:])
+	if c.KeyName != "" {
+		key := v.GetKey(c.KeyName)
+		if key == nil {
+			return nil, fmt.Errorf("key \"%s\" not found", c.KeyName)
 		}
-		key, err := os.ReadFile(idFile)
-		if err != nil {
-			return nil, fmt.Errorf("SSH key: %w", err)
-		}
-		signer, err := ssh.ParsePrivateKey(key)
+		signer, err := ssh.ParsePrivateKey([]byte(key.PrivateKey))
 		if err != nil {
 			return nil, fmt.Errorf("invalid SSH key: %w", err)
 		}
@@ -201,11 +196,11 @@ func shellConnect(c config.Connection) {
 	err := cmd.Run()
 
 	if err != nil && strings.Contains(stderrBuf.String(), "Host key verification failed") {
-		handleHostKeyFailure(c)
+		handleHostKeyFailure(c, nil)
 	}
 }
 
-func handleHostKeyFailure(c config.Connection) {
+func handleHostKeyFailure(c config.Connection, v *config.Vault) {
 	host := c.Host
 	if c.Port != 0 && c.Port != 22 {
 		host = fmt.Sprintf("[%s]:%d", c.Host, c.Port)
@@ -225,6 +220,6 @@ func handleHostKeyFailure(c config.Connection) {
 		rm.Stderr = os.Stderr
 		rm.Run()
 		fmt.Println("  Reconnecting...")
-		Connect(c)
+		Connect(c, v)
 	}
 }

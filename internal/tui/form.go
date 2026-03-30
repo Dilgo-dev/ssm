@@ -14,6 +14,7 @@ type Field struct {
 	Placeholder string
 	Password    bool
 	Required    bool
+	Options     []string // if set, field becomes a select (left/right to cycle)
 }
 
 type FormModel struct {
@@ -22,6 +23,7 @@ type FormModel struct {
 	cursor   int
 	Done     bool
 	Canceled bool
+	AddKey   bool
 	err      string
 	width    int
 	height   int
@@ -53,8 +55,14 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 	case tea.KeyMsg:
+		f := &m.Fields[m.cursor]
+
+		if f.Options != nil {
+			return m.handleSelect(msg)
+		}
+
 		if msg.Paste {
-			m.Fields[m.cursor].Value += string(msg.Runes)
+			f.Value += string(msg.Runes)
 			m.err = ""
 			return m, nil
 		}
@@ -85,18 +93,62 @@ func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			return m.validate()
 		case "backspace":
-			f := &m.Fields[m.cursor]
 			if len(f.Value) > 0 {
 				f.Value = f.Value[:len(f.Value)-1]
 			}
 		default:
 			if len(msg.Runes) > 0 {
-				m.Fields[m.cursor].Value += string(msg.Runes)
+				f.Value += string(msg.Runes)
 				m.err = ""
 			}
 		}
 	}
 	return m, nil
+}
+
+func (m FormModel) handleSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	f := &m.Fields[m.cursor]
+	switch msg.String() {
+	case "ctrl+c", "esc":
+		m.Canceled = true
+		return m, nil
+	case "left", "h":
+		idx := m.selectIndex(f)
+		if idx > 0 {
+			f.Value = f.Options[idx-1]
+		}
+	case "right", "l":
+		idx := m.selectIndex(f)
+		if idx < len(f.Options)-1 {
+			f.Value = f.Options[idx+1]
+		}
+	case "up", "shift+tab":
+		if m.cursor > 0 {
+			m.cursor--
+			m.err = ""
+		}
+	case "down", "tab":
+		if m.cursor < len(m.Fields)-1 {
+			m.cursor++
+			m.err = ""
+		}
+	case "enter":
+		if f.Value == "+ Add new key" {
+			m.AddKey = true
+			return m, tea.Quit
+		}
+		return m.validate()
+	}
+	return m, nil
+}
+
+func (m FormModel) selectIndex(f *Field) int {
+	for i, opt := range f.Options {
+		if opt == f.Value {
+			return i
+		}
+	}
+	return 0
 }
 
 func (m FormModel) validate() (tea.Model, tea.Cmd) {
@@ -146,7 +198,13 @@ func (m FormModel) View() string {
 		}
 
 		var valueStr string
-		if f.Value == "" {
+		if f.Options != nil {
+			if active {
+				valueStr = fieldCursor.Render("< ") + fieldValue.Render(f.Value) + fieldCursor.Render(" >")
+			} else {
+				valueStr = fieldValue.Render(f.Value)
+			}
+		} else if f.Value == "" {
 			if f.Placeholder != "" {
 				valueStr = fieldPlaceholder.Render(f.Placeholder)
 			} else {
@@ -158,7 +216,7 @@ func (m FormModel) View() string {
 			valueStr = fieldValue.Render(f.Value)
 		}
 
-		if active {
+		if active && f.Options == nil {
 			valueStr += fieldCursor.Render("|")
 		}
 

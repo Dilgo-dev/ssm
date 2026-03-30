@@ -16,9 +16,11 @@ const (
 	ActionNone Action = iota
 	ActionConnect
 	ActionAdd
+	ActionKeys
 )
 
 type ListModel struct {
+	vault       *config.Vault
 	allConns    []config.Connection
 	connections []config.Connection
 	cursor      int
@@ -32,10 +34,11 @@ type ListModel struct {
 	height      int
 }
 
-func NewListModel(conns []config.Connection, masterPass string) ListModel {
+func NewListModel(v *config.Vault, masterPass string) ListModel {
 	return ListModel{
-		allConns:    conns,
-		connections: conns,
+		vault:       v,
+		allConns:    v.Connections,
+		connections: v.Connections,
 		deleting:    -1,
 		masterPass:  masterPass,
 	}
@@ -108,6 +111,9 @@ func (m ListModel) handleNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		m.searching = true
 		m.search = ""
+	case "K":
+		m.Action = ActionKeys
+		return m, tea.Quit
 	}
 	return m, nil
 }
@@ -160,7 +166,8 @@ func (m ListModel) handleDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				break
 			}
 		}
-		config.Save(m.allConns, m.masterPass)
+		m.vault.Connections = m.allConns
+		config.Save(m.vault, m.masterPass)
 		m.deleting = -1
 		m.applyFilter()
 	case "n", "escape":
@@ -204,7 +211,7 @@ func (m ListModel) View() string {
 
 			if c.Password != "" {
 				portStr = " "
-			} else if c.IdentityFile != "" {
+			} else if c.KeyName != "" {
 				portStr = " "
 			} else {
 				portStr = " "
@@ -258,6 +265,7 @@ func (m ListModel) View() string {
 			footerItem("a", "add"),
 			footerItem("d", "delete"),
 			footerItem("/", "search"),
+			footerItem("K", "keys"),
 			footerItem("q", "quit"),
 		))
 	}

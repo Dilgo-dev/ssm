@@ -14,29 +14,34 @@ import (
 
 func runTUI() {
 	for {
-		conns, err := config.Load(masterPass)
+		v, err := config.Load(masterPass)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		p := tea.NewProgram(tui.NewListModel(conns, masterPass), tea.WithAltScreen())
+		p := tea.NewProgram(tui.NewApp(v, masterPass), tea.WithAltScreen())
 		result, err := p.Run()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		m := result.(tui.ListModel)
-		switch m.Action {
-		case tui.ActionConnect:
-			ssh.Connect(*m.Selected)
-		case tui.ActionAdd:
-			runAdd()
+		app := result.(tui.AppModel)
+		if app.Result.Connect != nil {
+			ssh.Connect(*app.Result.Connect, app.Result.ConnectV)
 			continue
 		}
 		break
 	}
+}
+
+func keyOptions() []string {
+	v, _ := config.Load(masterPass)
+	opts := []string{"(none)"}
+	opts = append(opts, v.KeyNames()...)
+	opts = append(opts, "+ Add new key")
+	return opts
 }
 
 func runAdd() {
@@ -46,7 +51,7 @@ func runAdd() {
 		{Label: "Port", Value: "22", Placeholder: "22"},
 		{Label: "User", Required: true},
 		{Label: "Password", Password: true},
-		{Label: "Identity file"},
+		{Label: "SSH Key", Value: "(none)", Options: keyOptions()},
 	}
 
 	p := tea.NewProgram(tui.NewFormModel("New connection", fields), tea.WithAltScreen())
@@ -62,8 +67,8 @@ func runAdd() {
 	}
 
 	name := fm.GetValue("Name")
-	conns, _ := config.Load(masterPass)
-	for _, c := range conns {
+	v, _ := config.Load(masterPass)
+	for _, c := range v.Connections {
 		if c.Name == name {
 			fmt.Printf("Connection \"%s\" already exists.\n", name)
 			return
@@ -75,17 +80,22 @@ func runAdd() {
 		port = 22
 	}
 
-	conn := config.Connection{
-		Name:         name,
-		Host:         fm.GetValue("Host"),
-		Port:         port,
-		User:         fm.GetValue("User"),
-		Password:     fm.GetValue("Password"),
-		IdentityFile: fm.GetValue("Identity file"),
+	keyName := fm.GetValue("SSH Key")
+	if keyName == "(none)" {
+		keyName = ""
 	}
 
-	conns = append(conns, conn)
-	if err := config.Save(conns, masterPass); err != nil {
+	conn := config.Connection{
+		Name:     name,
+		Host:     fm.GetValue("Host"),
+		Port:     port,
+		User:     fm.GetValue("User"),
+		Password: fm.GetValue("Password"),
+		KeyName:  keyName,
+	}
+
+	v.Connections = append(v.Connections, conn)
+	if err := config.Save(v, masterPass); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -93,14 +103,14 @@ func runAdd() {
 }
 
 func runRemove(name string) {
-	conns, err := config.Load(masterPass)
+	v, err := config.Load(masterPass)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
 	found := -1
-	for i, c := range conns {
+	for i, c := range v.Connections {
 		if c.Name == name {
 			found = i
 			break
@@ -111,8 +121,8 @@ func runRemove(name string) {
 		os.Exit(1)
 	}
 
-	conns = append(conns[:found], conns[found+1:]...)
-	if err := config.Save(conns, masterPass); err != nil {
+	v.Connections = append(v.Connections[:found], v.Connections[found+1:]...)
+	if err := config.Save(v, masterPass); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -120,14 +130,14 @@ func runRemove(name string) {
 }
 
 func runEdit(name string) {
-	conns, err := config.Load(masterPass)
+	v, err := config.Load(masterPass)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
 	found := -1
-	for i, c := range conns {
+	for i, c := range v.Connections {
 		if c.Name == name {
 			found = i
 			break
@@ -138,13 +148,18 @@ func runEdit(name string) {
 		os.Exit(1)
 	}
 
-	c := conns[found]
+	c := v.Connections[found]
+	keyVal := c.KeyName
+	if keyVal == "" {
+		keyVal = "(none)"
+	}
+
 	fields := []tui.Field{
 		{Label: "Host", Value: c.Host, Required: true},
 		{Label: "Port", Value: strconv.Itoa(c.Port), Placeholder: "22"},
 		{Label: "User", Value: c.User, Required: true},
 		{Label: "Password", Value: c.Password, Password: true},
-		{Label: "Identity file", Value: c.IdentityFile},
+		{Label: "SSH Key", Value: keyVal, Options: keyOptions()},
 	}
 
 	p := tea.NewProgram(tui.NewFormModel("Edit: "+name, fields), tea.WithAltScreen())
@@ -164,14 +179,19 @@ func runEdit(name string) {
 		port = 22
 	}
 
+	keyName := fm.GetValue("SSH Key")
+	if keyName == "(none)" {
+		keyName = ""
+	}
+
 	c.Host = fm.GetValue("Host")
 	c.Port = port
 	c.User = fm.GetValue("User")
 	c.Password = fm.GetValue("Password")
-	c.IdentityFile = fm.GetValue("Identity file")
+	c.KeyName = keyName
 
-	conns[found] = c
-	if err := config.Save(conns, masterPass); err != nil {
+	v.Connections[found] = c
+	if err := config.Save(v, masterPass); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
