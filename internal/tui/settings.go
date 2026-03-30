@@ -35,6 +35,11 @@ func NewSettingsModel(s *config.Settings) SettingsModel {
 				options: []string{"on", "off"},
 				value:   boolToOnOff(s.VimKeys),
 			},
+			{
+				label:   "Check updates",
+				options: []string{"on", "off"},
+				value:   boolToOnOff(s.AutoUpdate),
+			},
 		},
 	}
 }
@@ -50,6 +55,7 @@ func (m SettingsModel) Settings() *config.Settings {
 	return &config.Settings{
 		PasswordCache: m.fields[0].value,
 		VimKeys:       m.fields[1].value == "on",
+		AutoUpdate:    m.fields[2].value == "on",
 	}
 }
 

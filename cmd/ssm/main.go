@@ -9,22 +9,31 @@ import (
 	"golang.org/x/term"
 
 	"ssm/internal/config"
+	"ssm/internal/update"
 	"ssm/internal/vault"
 )
 
-var masterPass string
+var (
+	masterPass string
+	version    = "dev"
+)
 
 func main() {
 	if len(os.Args) < 2 {
+		checkUpdate()
 		unlock()
 		runTUI()
+		showUpdateNotice()
 		return
 	}
 
 	switch os.Args[1] {
+	case "--version", "-v":
+		fmt.Printf("ssm %s\n", version)
+		return
 	case "--help", "-h", "help":
-		fmt.Print(`ssm - SSH connection manager
-
+		fmt.Printf("ssm %s - SSH connection manager\n", version)
+		fmt.Print(`
 Usage:
   ssm                  open interactive connection list
   ssm add              add a new connection
@@ -34,6 +43,7 @@ Usage:
   ssm keys             list saved SSH keys
   ssm keys add         add a new SSH key
   ssm keys remove <n>  remove a SSH key
+  ssm update           update ssm to the latest version
 
 Cloud (optional):
   ssm login            authenticate with sync server
@@ -49,6 +59,13 @@ Shortcuts (in TUI):
   Ctrl+T n    new tab        Ctrl+T 1-9  switch tab
   Ctrl+T w    close tab      Ctrl+T d    detach
 `)
+		return
+	case "update":
+		fmt.Println("Checking for updates...")
+		if err := update.Download(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 		return
 	case "add":
 		unlock()
@@ -105,8 +122,24 @@ Shortcuts (in TUI):
 		runPull()
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
-		fmt.Println("Usage: ssm [add|remove|edit|keys|login|register|push|pull|logout]")
+		fmt.Println("Usage: ssm [add|remove|edit|keys|exec|update|login|register|push|pull|logout]")
 		os.Exit(1)
+	}
+}
+
+func checkUpdate() {
+	settings := config.LoadSettings()
+	if settings.AutoUpdate && version != "dev" {
+		update.CheckInBackground(version)
+	}
+}
+
+func showUpdateNotice() {
+	if version == "dev" {
+		return
+	}
+	if v := update.GetAvailable(version); v != "" {
+		fmt.Printf("\nssm %s available. Run 'ssm update' to upgrade.\n", v)
 	}
 }
 

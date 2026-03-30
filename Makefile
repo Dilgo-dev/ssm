@@ -1,7 +1,9 @@
+VERSION ?= dev
+
 .PHONY: build install clean fmt lint check
 
 build:
-	go build -o ssm ./cmd/ssm
+	go build -ldflags="-s -w -X main.version=$(VERSION)" -o ssm ./cmd/ssm
 
 install: build
 	cp ssm ~/.local/bin/ssm
