@@ -35,6 +35,10 @@ func main() {
 		}
 	}()
 
+	if version == "dev" {
+		config.EnableDebug()
+	}
+
 	if len(os.Args) < 2 {
 		checkUpdate()
 		unlock()
