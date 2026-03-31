@@ -213,7 +213,7 @@ func (m ListModel) handleNormal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m ListModel) handleSearch(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "escape":
+	case "esc":
 		m.searching = false
 		m.search = ""
 		m.applyFilter()
