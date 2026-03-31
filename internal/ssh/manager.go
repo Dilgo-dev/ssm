@@ -179,8 +179,9 @@ func (m *SessionManager) AddSession(c config.Connection, v *config.Vault) error 
 	m.sessions = append(m.sessions, s)
 	m.active = len(m.sessions) - 1
 	if m.running {
-		m.setScrollRegion()
 		fmt.Print("\033[2J\033[H")
+		m.setScrollRegion()
+		fmt.Print("\033[H")
 		m.renderTabBar()
 	}
 	m.mu.Unlock()
@@ -255,6 +256,8 @@ func (m *SessionManager) waitSession(s *SSHSession) {
 	}
 
 	fmt.Print("\033[2J\033[H")
+	m.setScrollRegion()
+	fmt.Print("\033[H")
 	buffered := m.sessions[m.active].buf.Snapshot()
 	if len(buffered) > 0 {
 		os.Stdout.Write(buffered)
@@ -272,6 +275,8 @@ func (m *SessionManager) SwitchTo(idx int) {
 
 	m.active = idx
 	fmt.Print("\033[2J\033[H")
+	m.setScrollRegion()
+	fmt.Print("\033[H")
 	buffered := m.sessions[m.active].buf.Snapshot()
 	if len(buffered) > 0 {
 		os.Stdout.Write(buffered)
@@ -320,8 +325,9 @@ func (m *SessionManager) Run() {
 	}
 
 	m.running = true
-	m.setScrollRegion()
 	fmt.Print("\033[2J\033[H")
+	m.setScrollRegion()
+	fmt.Print("\033[H")
 	m.renderTabBar()
 
 	sigChan := make(chan os.Signal, 1)
@@ -437,8 +443,9 @@ func (m *SessionManager) openPicker() {
 	}
 
 	m.mu.Lock()
-	m.setScrollRegion()
 	fmt.Print("\033[2J\033[H")
+	m.setScrollRegion()
+	fmt.Print("\033[H")
 	if len(m.sessions) > 0 {
 		buffered := m.sessions[m.active].buf.Snapshot()
 		if len(buffered) > 0 {
