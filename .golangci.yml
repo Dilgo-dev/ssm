@@ -13,15 +13,14 @@ linters:
     - unconvert
     - unparam
     - gosec
-
-linters-settings:
-  revive:
-    rules:
-      - name: exported
-        disabled: true
-  gocritic:
-    disabled-checks:
-      - exitAfterDefer
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+    gocritic:
+      disabled-checks:
+        - exitAfterDefer
 
 run:
   timeout: 2m
