@@ -94,6 +94,28 @@ func (m *SessionManager) resetScrollRegion() {
 	fmt.Printf("\033[r")
 }
 
+func replayContent(data []byte) []byte {
+	lastClear := -1
+	for i := 0; i < len(data); i++ {
+		if data[i] == '\033' && i+1 < len(data) && data[i+1] == '[' {
+			j := i + 2
+			for j < len(data) && ((data[j] >= '0' && data[j] <= '9') || data[j] == ';') {
+				j++
+			}
+			if j < len(data) {
+				seq := string(data[i+2 : j+1])
+				if seq == "2J" || seq == "3J" {
+					lastClear = j + 1
+				}
+			}
+		}
+	}
+	if lastClear >= 0 {
+		data = data[lastClear:]
+	}
+	return stripScrollResets(data)
+}
+
 func stripScrollResets(data []byte) []byte {
 	out := make([]byte, 0, len(data))
 	i := 0
@@ -213,8 +235,6 @@ func (m *SessionManager) AddSession(c config.Connection, v *config.Vault) error 
 	m.sessions = append(m.sessions, s)
 	m.active = len(m.sessions) - 1
 	if m.running {
-		m.setScrollRegion()
-		m.clearScrollArea()
 		m.renderTabBar()
 	}
 	m.mu.Unlock()
@@ -293,7 +313,7 @@ func (m *SessionManager) waitSession(s *SSHSession) {
 
 	m.setScrollRegion()
 	m.clearScrollArea()
-	buffered := stripScrollResets(m.sessions[m.active].buf.Snapshot())
+	buffered := replayContent(m.sessions[m.active].buf.Snapshot())
 	if len(buffered) > 0 {
 		os.Stdout.Write(buffered)
 	}
@@ -311,7 +331,7 @@ func (m *SessionManager) SwitchTo(idx int) {
 	m.active = idx
 	m.setScrollRegion()
 	m.clearScrollArea()
-	buffered := stripScrollResets(m.sessions[m.active].buf.Snapshot())
+	buffered := replayContent(m.sessions[m.active].buf.Snapshot())
 	if len(buffered) > 0 {
 		os.Stdout.Write(buffered)
 	}
@@ -360,7 +380,6 @@ func (m *SessionManager) Run() {
 
 	m.running = true
 	m.setScrollRegion()
-	m.clearScrollArea()
 	m.renderTabBar()
 
 	sigChan := make(chan os.Signal, 1)
@@ -381,7 +400,7 @@ func (m *SessionManager) Run() {
 
 	signal.Stop(sigChan)
 	m.resetScrollRegion()
-	fmt.Print("\033[2J\033[H")
+	fmt.Print("\033[?1049l")
 	_ = term.Restore(int(os.Stdin.Fd()), m.oldState)
 	m.running = false
 }
@@ -468,18 +487,21 @@ func (m *SessionManager) openPicker() {
 	newState, _ := term.MakeRaw(int(os.Stdin.Fd()))
 	m.oldState = newState
 
+	added := false
 	if conn != nil {
 		if err := m.AddSession(*conn, m.vault); err != nil {
 			fmt.Printf("\r\nError: %v\r\n", err)
 			time.Sleep(time.Second)
+		} else {
+			added = true
 		}
 	}
 
 	m.mu.Lock()
 	m.setScrollRegion()
-	m.clearScrollArea()
-	if len(m.sessions) > 0 {
-		buffered := stripScrollResets(m.sessions[m.active].buf.Snapshot())
+	if !added && len(m.sessions) > 0 {
+		m.clearScrollArea()
+		buffered := replayContent(m.sessions[m.active].buf.Snapshot())
 		if len(buffered) > 0 {
 			os.Stdout.Write(buffered)
 		}
