@@ -77,7 +77,6 @@ func (m *SessionManager) setScrollRegion() {
 		h = 1
 	}
 	fmt.Printf("\033[1;%dr", h)
-	fmt.Printf("\033[%d;1H", h)
 }
 
 func (m *SessionManager) resetScrollRegion() {
