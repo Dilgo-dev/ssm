@@ -64,6 +64,9 @@ func runRegister() {
 	vm := vResult.(tui.VerifyModel)
 	if vm.Verified() {
 		fmt.Println("Account verified and ready.")
+		if err := cloud.Pull(cfg); err == nil {
+			fmt.Println("Vault synced from cloud.")
+		}
 	} else {
 		fmt.Println("Account created. Verify your email to use cloud sync.")
 	}
@@ -99,8 +102,13 @@ func runLogin() {
 		os.Exit(1)
 	}
 
-	_ = cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token, Email: email})
+	cfg := &cloud.CloudConfig{Server: server, Token: token, Email: email}
+	_ = cloud.SaveCloud(cfg)
 	fmt.Println("Logged in.")
+
+	if err := cloud.Pull(cfg); err == nil {
+		fmt.Println("Vault synced from cloud.")
+	}
 }
 
 func runLogout() {
