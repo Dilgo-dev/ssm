@@ -26,8 +26,13 @@ func ConnectWithManager(c config.Connection, v *config.Vault, picker PickerFunc)
 
 	mgr := NewSessionManager(v, picker)
 	fmt.Print("\033[?1049h")
-	if err := mgr.AddSession(c, v); err != nil {
+	if err := mgr.Start(); err != nil {
 		fmt.Print("\033[?1049l")
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return
+	}
+	if err := mgr.AddSession(c, v); err != nil {
+		mgr.Stop()
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return
 	}

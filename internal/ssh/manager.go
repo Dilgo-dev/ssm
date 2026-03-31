@@ -370,18 +370,26 @@ func (m *SessionManager) resize() {
 	m.mu.Unlock()
 }
 
-func (m *SessionManager) Run() {
+func (m *SessionManager) Start() error {
 	var err error
 	m.oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "terminal raw mode: %v\n", err)
-		return
+		return fmt.Errorf("terminal raw mode: %w", err)
 	}
-
 	m.running = true
 	m.setScrollRegion()
 	m.renderTabBar()
+	return nil
+}
 
+func (m *SessionManager) Stop() {
+	m.resetScrollRegion()
+	fmt.Print("\033[?1049l")
+	_ = term.Restore(int(os.Stdin.Fd()), m.oldState)
+	m.running = false
+}
+
+func (m *SessionManager) Run() {
 	sigChan := make(chan os.Signal, 1)
 	notifyResize(sigChan)
 	go func() {
@@ -399,10 +407,7 @@ func (m *SessionManager) Run() {
 	<-m.quit
 
 	signal.Stop(sigChan)
-	m.resetScrollRegion()
-	fmt.Print("\033[?1049l")
-	_ = term.Restore(int(os.Stdin.Fd()), m.oldState)
-	m.running = false
+	m.Stop()
 }
 
 func (m *SessionManager) inputLoop() {
