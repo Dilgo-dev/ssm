@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"ssm/internal/cloud"
 	"ssm/internal/config"
 )
 
@@ -88,6 +89,7 @@ func (m KeysModel) handleDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "y":
 		m.vault.Keys = append(m.vault.Keys[:m.deleting], m.vault.Keys[m.deleting+1:]...)
 		_ = config.Save(m.vault, m.masterPass)
+		cloud.AutoPush()
 		m.deleting = -1
 		if m.cursor >= len(m.vault.Keys) && m.cursor > 0 {
 			m.cursor--

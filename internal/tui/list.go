@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"ssm/internal/cloud"
 	"ssm/internal/config"
 )
 
@@ -256,6 +257,7 @@ func (m ListModel) handleDelete(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.vault.Connections = m.allConns
 		_ = config.Save(m.vault, m.masterPass)
+		cloud.AutoPush()
 		m.deleting = -1
 		m.applyFilter()
 	case "n", "escape":

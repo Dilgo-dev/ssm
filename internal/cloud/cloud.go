@@ -15,6 +15,7 @@ import (
 type CloudConfig struct {
 	Server string `json:"server"`
 	Token  string `json:"token"`
+	Email  string `json:"email,omitempty"`
 }
 
 func cloudPath() string {
@@ -165,6 +166,32 @@ func CheckVerified(cfg *CloudConfig) bool {
 		return false
 	}
 	return result.Verified
+}
+
+func AutoPush() {
+	settings := config.LoadSettings()
+	if !settings.AutoSync {
+		return
+	}
+	cfg, err := LoadCloud()
+	if err != nil {
+		return
+	}
+	go func() {
+		_ = Push(cfg)
+	}()
+}
+
+func AutoPull() {
+	settings := config.LoadSettings()
+	if !settings.AutoSync {
+		return
+	}
+	cfg, err := LoadCloud()
+	if err != nil {
+		return
+	}
+	_ = Pull(cfg)
 }
 
 func parseError(resp *http.Response) error {

@@ -7,12 +7,14 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"ssm/internal/cloud"
 	"ssm/internal/config"
 	"ssm/internal/ssh"
 	"ssm/internal/tui"
 )
 
 func runTUI() {
+	cloud.AutoPull()
 	for {
 		v, err := config.Load(masterPass)
 		if err != nil {
@@ -111,6 +113,7 @@ func runAdd() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	cloud.AutoPush()
 	fmt.Printf("Connection \"%s\" added.\n", name)
 }
 
@@ -138,6 +141,7 @@ func runRemove(name string) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	cloud.AutoPush()
 	fmt.Printf("Connection \"%s\" removed.\n", name)
 }
 
@@ -225,5 +229,6 @@ func runEdit(name string) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	cloud.AutoPush()
 	fmt.Printf("Connection \"%s\" updated.\n", name)
 }

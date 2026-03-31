@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"ssm/internal/cloud"
 	"ssm/internal/config"
 	"ssm/internal/tui"
 )
@@ -67,6 +68,7 @@ func runKeysAdd() string {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	cloud.AutoPush()
 	fmt.Printf("Key \"%s\" added.\n", name)
 	return name
 }
@@ -95,5 +97,6 @@ func runKeysRemove(name string) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+	cloud.AutoPush()
 	fmt.Printf("Key \"%s\" removed.\n", name)
 }

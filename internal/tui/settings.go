@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"ssm/internal/cloud"
 	"ssm/internal/config"
 )
 
@@ -16,14 +17,20 @@ type settingField struct {
 }
 
 type SettingsModel struct {
-	fields []settingField
-	cursor int
-	width  int
-	height int
+	fields    []settingField
+	cursor    int
+	cloudUser string
+	width     int
+	height    int
 }
 
 func NewSettingsModel(s *config.Settings) SettingsModel {
+	cloudUser := ""
+	if cfg, err := cloud.LoadCloud(); err == nil {
+		cloudUser = cfg.Email
+	}
 	return SettingsModel{
+		cloudUser: cloudUser,
 		fields: []settingField{
 			{
 				label:   "Password cache",
@@ -39,6 +46,11 @@ func NewSettingsModel(s *config.Settings) SettingsModel {
 				label:   "Check updates",
 				options: []string{"on", "off"},
 				value:   boolToOnOff(s.AutoUpdate),
+			},
+			{
+				label:   "Auto sync",
+				options: []string{"on", "off"},
+				value:   boolToOnOff(s.AutoSync),
 			},
 		},
 	}
@@ -56,6 +68,7 @@ func (m SettingsModel) Settings() *config.Settings {
 		PasswordCache: m.fields[0].value,
 		VimKeys:       m.fields[1].value == "on",
 		AutoUpdate:    m.fields[2].value == "on",
+		AutoSync:      m.fields[3].value == "on",
 	}
 }
 
@@ -109,6 +122,14 @@ func (m SettingsModel) View() string {
 	var content strings.Builder
 
 	content.WriteString(titleStyle.Render("  Settings"))
+	content.WriteString("\n\n")
+
+	settingsLabelDim := fieldLabel.Width(34)
+	if m.cloudUser != "" {
+		content.WriteString("  " + settingsLabelDim.Render("Cloud account") + " " + fieldValue.Render(m.cloudUser))
+	} else {
+		content.WriteString("  " + settingsLabelDim.Render("Cloud account") + " " + dimRow.Render("not logged in"))
+	}
 	content.WriteString("\n\n")
 
 	settingsLabel := fieldLabel.Width(34)

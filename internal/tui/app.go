@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"ssm/internal/cloud"
 	"ssm/internal/config"
 )
 
@@ -356,6 +357,7 @@ func (m *AppModel) saveNewConn() {
 		KeyName:  keyName,
 	})
 	_ = config.Save(m.vault, m.masterPass)
+	cloud.AutoPush()
 }
 
 func (m *AppModel) saveEditConn() {
@@ -375,6 +377,7 @@ func (m *AppModel) saveEditConn() {
 	c.Group = m.form.GetValue("Group")
 	c.KeyName = keyName
 	_ = config.Save(m.vault, m.masterPass)
+	cloud.AutoPush()
 }
 
 func (m *AppModel) saveKey() string {
@@ -390,6 +393,7 @@ func (m *AppModel) saveKey() string {
 		PrivateKey: content,
 	})
 	_ = config.Save(m.vault, m.masterPass)
+	cloud.AutoPush()
 	return name
 }
 

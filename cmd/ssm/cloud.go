@@ -48,7 +48,7 @@ func runRegister() {
 		os.Exit(1)
 	}
 
-	cfg := &cloud.CloudConfig{Server: server, Token: token}
+	cfg := &cloud.CloudConfig{Server: server, Token: token, Email: email}
 	_ = cloud.SaveCloud(cfg)
 
 	check := func() bool {
@@ -99,7 +99,7 @@ func runLogin() {
 		os.Exit(1)
 	}
 
-	_ = cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token})
+	_ = cloud.SaveCloud(&cloud.CloudConfig{Server: server, Token: token, Email: email})
 	fmt.Println("Logged in.")
 }
 

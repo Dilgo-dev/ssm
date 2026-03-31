@@ -17,10 +17,11 @@ type Settings struct {
 	PasswordCache string `json:"password_cache"`
 	VimKeys       bool   `json:"vim_keys"`
 	AutoUpdate    bool   `json:"auto_update"`
+	AutoSync      bool   `json:"auto_sync"`
 }
 
 func DefaultSettings() *Settings {
-	return &Settings{PasswordCache: "always", VimKeys: true, AutoUpdate: true}
+	return &Settings{PasswordCache: "always", VimKeys: true, AutoUpdate: true, AutoSync: true}
 }
 
 func settingsPath() string {
