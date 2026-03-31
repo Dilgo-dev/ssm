@@ -1,7 +1,10 @@
 package tui
 
 import (
+	"fmt"
+	"math"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,6 +23,8 @@ type SettingsModel struct {
 	fields    []settingField
 	cursor    int
 	cloudUser string
+	lastPush  string
+	lastPull  string
 	width     int
 	height    int
 }
@@ -31,6 +36,8 @@ func NewSettingsModel(s *config.Settings) SettingsModel {
 	}
 	return SettingsModel{
 		cloudUser: cloudUser,
+		lastPush:  timeAgo(s.LastPush),
+		lastPull:  timeAgo(s.LastPull),
 		fields: []settingField{
 			{
 				label:   "Password cache",
@@ -56,6 +63,39 @@ func NewSettingsModel(s *config.Settings) SettingsModel {
 	}
 }
 
+func timeAgo(ts string) string {
+	if ts == "" {
+		return "never"
+	}
+	t, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		return "never"
+	}
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		m := int(math.Round(d.Minutes()))
+		if m == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", m)
+	case d < 24*time.Hour:
+		h := int(math.Round(d.Hours()))
+		if h == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", h)
+	default:
+		days := int(math.Round(d.Hours() / 24))
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	}
+}
+
 func boolToOnOff(b bool) string {
 	if b {
 		return "on"
@@ -64,12 +104,12 @@ func boolToOnOff(b bool) string {
 }
 
 func (m SettingsModel) Settings() *config.Settings {
-	return &config.Settings{
-		PasswordCache: m.fields[0].value,
-		VimKeys:       m.fields[1].value == "on",
-		AutoUpdate:    m.fields[2].value == "on",
-		AutoSync:      m.fields[3].value == "on",
-	}
+	s := config.LoadSettings()
+	s.PasswordCache = m.fields[0].value
+	s.VimKeys = m.fields[1].value == "on"
+	s.AutoUpdate = m.fields[2].value == "on"
+	s.AutoSync = m.fields[3].value == "on"
+	return s
 }
 
 func (m SettingsModel) Init() tea.Cmd { return nil }
@@ -130,6 +170,10 @@ func (m SettingsModel) View() string {
 	} else {
 		content.WriteString("  " + settingsLabelDim.Render("Cloud account") + " " + dimRow.Render("not logged in"))
 	}
+	content.WriteString("\n")
+	content.WriteString("  " + settingsLabelDim.Render("Last push") + " " + dimRow.Render(m.lastPush))
+	content.WriteString("\n")
+	content.WriteString("  " + settingsLabelDim.Render("Last pull") + " " + dimRow.Render(m.lastPull))
 	content.WriteString("\n\n")
 
 	settingsLabel := fieldLabel.Width(34)

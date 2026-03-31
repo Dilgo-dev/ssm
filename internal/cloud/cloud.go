@@ -79,11 +79,13 @@ func Login(server, email, password string) (string, error) {
 func Push(cfg *CloudConfig) error {
 	data, err := os.ReadFile(config.Path())
 	if err != nil {
+		config.Debug("push: no local vault: %v", err)
 		return fmt.Errorf("no local vault found")
 	}
 
 	req, err := http.NewRequest("PUT", cfg.Server+"/sync", bytes.NewReader(data))
 	if err != nil {
+		config.Debug("push: request error: %v", err)
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+cfg.Token)
@@ -91,43 +93,58 @@ func Push(cfg *CloudConfig) error {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		config.Debug("push: connection failed: %v", err)
 		return fmt.Errorf("connection failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		config.Debug("push: server error %d", resp.StatusCode)
 		return parseError(resp)
 	}
+	config.Debug("push: success")
+	config.RecordSync("push")
 	return nil
 }
 
 func Pull(cfg *CloudConfig) error {
 	req, err := http.NewRequest("GET", cfg.Server+"/sync", nil)
 	if err != nil {
+		config.Debug("pull: request error: %v", err)
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+cfg.Token)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		config.Debug("pull: connection failed: %v", err)
 		return fmt.Errorf("connection failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
+		config.Debug("pull: no vault on server (404)")
 		return fmt.Errorf("no vault found on server (run: ssm push)")
 	}
 	if resp.StatusCode != 200 {
+		config.Debug("pull: server error %d", resp.StatusCode)
 		return parseError(resp)
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
+		config.Debug("pull: read body error: %v", err)
 		return err
 	}
 
 	_ = os.MkdirAll(config.Dir(), 0700)
-	return os.WriteFile(config.Path(), data, 0600)
+	if err := os.WriteFile(config.Path(), data, 0600); err != nil {
+		config.Debug("pull: write vault error: %v", err)
+		return err
+	}
+	config.Debug("pull: success")
+	config.RecordSync("pull")
+	return nil
 }
 
 func parseTokenResponse(resp *http.Response) (string, error) {
@@ -171,27 +188,41 @@ func CheckVerified(cfg *CloudConfig) bool {
 func AutoPush() {
 	settings := config.LoadSettings()
 	if !settings.AutoSync {
+		config.Debug("auto-push: skipped (auto_sync disabled)")
 		return
 	}
 	cfg, err := LoadCloud()
 	if err != nil {
+		config.Debug("auto-push: skipped (%v)", err)
 		return
 	}
 	go func() {
-		_ = Push(cfg)
+		if err := Push(cfg); err != nil {
+			config.Debug("auto-push: %v", err)
+		}
 	}()
 }
 
 func AutoPull() {
 	settings := config.LoadSettings()
 	if !settings.AutoSync {
+		config.Debug("auto-pull: skipped (auto_sync disabled)")
 		return
 	}
 	cfg, err := LoadCloud()
 	if err != nil {
+		config.Debug("auto-pull: skipped (%v)", err)
 		return
 	}
-	_ = Pull(cfg)
+	if err := Pull(cfg); err != nil {
+		config.Debug("auto-pull: %v", err)
+		if config.Exists() {
+			config.Debug("auto-pull: vault not on server, pushing local vault")
+			if err := Push(cfg); err != nil {
+				config.Debug("auto-pull: fallback push failed: %v", err)
+			}
+		}
+	}
 }
 
 func parseError(resp *http.Response) error {

@@ -18,6 +18,8 @@ type Settings struct {
 	VimKeys       bool   `json:"vim_keys"`
 	AutoUpdate    bool   `json:"auto_update"`
 	AutoSync      bool   `json:"auto_sync"`
+	LastPush      string `json:"last_push,omitempty"`
+	LastPull      string `json:"last_pull,omitempty"`
 }
 
 func DefaultSettings() *Settings {
@@ -100,4 +102,16 @@ func GetCachedPassword() string {
 
 func ClearPasswordCache() {
 	os.Remove(cachePath())
+}
+
+func RecordSync(syncType string) {
+	s := LoadSettings()
+	ts := time.Now().Format(time.RFC3339)
+	switch syncType {
+	case "push":
+		s.LastPush = ts
+	case "pull":
+		s.LastPull = ts
+	}
+	_ = SaveSettings(s)
 }
