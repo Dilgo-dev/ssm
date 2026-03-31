@@ -80,9 +80,9 @@ func replayContent(data []byte) []byte {
 }
 
 func (m *SessionManager) renderTabBar() {
-	fmt.Printf("\033[s")
+	fmt.Print("\0337")
 	fmt.Printf("\033[%d;1H", m.height)
-	fmt.Printf("\033[K")
+	fmt.Print("\033[K")
 
 	for i, s := range m.sessions {
 		if i == m.active {
@@ -92,7 +92,7 @@ func (m *SessionManager) renderTabBar() {
 		}
 	}
 
-	fmt.Printf("\033[u")
+	fmt.Print("\0338")
 }
 
 func (m *SessionManager) AddSession(c config.Connection, v *config.Vault) error {
