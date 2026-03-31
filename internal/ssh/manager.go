@@ -42,24 +42,6 @@ type SessionManager struct {
 	running  bool
 }
 
-func containsScreenReset(data []byte) bool {
-	for i := 0; i < len(data)-1; i++ {
-		if data[i] == '\033' && i+1 < len(data) && data[i+1] == '[' {
-			j := i + 2
-			for j < len(data) && ((data[j] >= '0' && data[j] <= '9') || data[j] == ';') {
-				j++
-			}
-			if j < len(data) {
-				seq := string(data[i+2 : j+1])
-				if seq == "2J" || seq == "3J" || seq == "r" || seq == "0r" {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
 func NewSessionManager(v *config.Vault, picker PickerFunc) *SessionManager {
 	w, h, _ := term.GetSize(int(os.Stdout.Fd()))
 	return &SessionManager{
@@ -71,27 +53,8 @@ func NewSessionManager(v *config.Vault, picker PickerFunc) *SessionManager {
 	}
 }
 
-func (m *SessionManager) setScrollRegion() {
-	h := m.height - 1
-	if h < 1 {
-		h = 1
-	}
-	fmt.Printf("\033[1;%dr", h)
-}
-
-func (m *SessionManager) clearScrollArea() {
-	h := m.height - 1
-	if h < 1 {
-		h = 1
-	}
-	for i := 1; i <= h; i++ {
-		fmt.Printf("\033[%d;1H\033[2K", i)
-	}
-	fmt.Print("\033[H")
-}
-
-func (m *SessionManager) resetScrollRegion() {
-	fmt.Printf("\033[r")
+func (m *SessionManager) clearScreen() {
+	fmt.Print("\033[2J\033[H")
 }
 
 func replayContent(data []byte) []byte {
@@ -113,30 +76,7 @@ func replayContent(data []byte) []byte {
 	if lastClear >= 0 {
 		data = data[lastClear:]
 	}
-	return stripScrollResets(data)
-}
-
-func stripScrollResets(data []byte) []byte {
-	out := make([]byte, 0, len(data))
-	i := 0
-	for i < len(data) {
-		if data[i] == '\033' && i+1 < len(data) && data[i+1] == '[' {
-			j := i + 2
-			for j < len(data) && ((data[j] >= '0' && data[j] <= '9') || data[j] == ';') {
-				j++
-			}
-			if j < len(data) {
-				seq := string(data[i+2 : j+1])
-				if seq == "2J" || seq == "3J" || seq == "r" || seq == "0r" {
-					i = j + 1
-					continue
-				}
-			}
-		}
-		out = append(out, data[i])
-		i++
-	}
-	return out
+	return data
 }
 
 func (m *SessionManager) renderTabBar() {
@@ -257,16 +197,10 @@ func (m *SessionManager) readOutput(s *SSHSession) {
 			m.mu.Unlock()
 
 			if isActive {
-				if containsScreenReset(buf[:n]) {
-					m.mu.Lock()
-					os.Stdout.Write(stripScrollResets(buf[:n]))
-					m.setScrollRegion()
-					m.clearScrollArea()
-					m.renderTabBar()
-					m.mu.Unlock()
-				} else {
-					os.Stdout.Write(buf[:n])
-				}
+				os.Stdout.Write(buf[:n])
+				m.mu.Lock()
+				m.renderTabBar()
+				m.mu.Unlock()
 			}
 		}
 		if err != nil {
@@ -311,8 +245,7 @@ func (m *SessionManager) waitSession(s *SSHSession) {
 		m.active = len(m.sessions) - 1
 	}
 
-	m.setScrollRegion()
-	m.clearScrollArea()
+	m.clearScreen()
 	buffered := replayContent(m.sessions[m.active].buf.Snapshot())
 	if len(buffered) > 0 {
 		os.Stdout.Write(buffered)
@@ -329,8 +262,7 @@ func (m *SessionManager) SwitchTo(idx int) {
 	}
 
 	m.active = idx
-	m.setScrollRegion()
-	m.clearScrollArea()
+	m.clearScreen()
 	buffered := replayContent(m.sessions[m.active].buf.Snapshot())
 	if len(buffered) > 0 {
 		os.Stdout.Write(buffered)
@@ -365,7 +297,6 @@ func (m *SessionManager) resize() {
 			_ = s.session.WindowChange(ptyH, w)
 		}
 	}
-	m.setScrollRegion()
 	m.renderTabBar()
 	m.mu.Unlock()
 }
@@ -377,13 +308,11 @@ func (m *SessionManager) Start() error {
 		return fmt.Errorf("terminal raw mode: %w", err)
 	}
 	m.running = true
-	m.setScrollRegion()
 	m.renderTabBar()
 	return nil
 }
 
 func (m *SessionManager) Stop() {
-	m.resetScrollRegion()
 	fmt.Print("\033[?1049l")
 	_ = term.Restore(int(os.Stdin.Fd()), m.oldState)
 	m.running = false
@@ -483,7 +412,6 @@ func (m *SessionManager) handleCommand(cmd byte) {
 }
 
 func (m *SessionManager) openPicker() {
-	m.resetScrollRegion()
 	_ = term.Restore(int(os.Stdin.Fd()), m.oldState)
 	fmt.Print("\033[2J\033[H")
 
@@ -503,9 +431,8 @@ func (m *SessionManager) openPicker() {
 	}
 
 	m.mu.Lock()
-	m.setScrollRegion()
 	if !added && len(m.sessions) > 0 {
-		m.clearScrollArea()
+		m.clearScreen()
 		buffered := replayContent(m.sessions[m.active].buf.Snapshot())
 		if len(buffered) > 0 {
 			os.Stdout.Write(buffered)
