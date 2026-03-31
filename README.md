@@ -44,6 +44,10 @@ ssm pull
 
 The server never sees your data. You can also self-host it.
 
+## Contact
+
+contact@gossm.sh
+
 ## License
 
 MIT
