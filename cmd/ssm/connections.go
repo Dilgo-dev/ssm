@@ -11,10 +11,11 @@ import (
 	"ssm/internal/config"
 	"ssm/internal/ssh"
 	"ssm/internal/tui"
+	"ssm/internal/vault"
 )
 
 func runTUI() {
-	cloud.AutoPull()
+	mergeCloudVault()
 	for {
 		v, err := config.Load(masterPass)
 		if err != nil {
@@ -231,4 +232,81 @@ func runEdit(name string) {
 	}
 	cloud.AutoPush()
 	fmt.Printf("Connection \"%s\" updated.\n", name)
+}
+
+func mergeCloudVault() {
+	settings := config.LoadSettings()
+	if !settings.AutoSync {
+		return
+	}
+	cfg, err := cloud.LoadCloud()
+	if err != nil {
+		return
+	}
+
+	localVault, _ := config.Load(masterPass)
+	localBackup, _ := os.ReadFile(config.Path())
+
+	if err := cloud.Pull(cfg); err != nil {
+		config.Debug("merge: pull failed: %v", err)
+		if config.Exists() && localBackup != nil {
+			config.Debug("merge: no remote vault, pushing local")
+			_ = cloud.Push(cfg)
+		}
+		return
+	}
+
+	remoteVault, err := config.Load(masterPass)
+	if err == nil {
+		config.Debug("merge: same password, merging vaults")
+		merged := config.MergeVaults(localVault, remoteVault)
+		_ = config.Save(merged, masterPass)
+		cloud.AutoPush()
+		return
+	}
+
+	if err != vault.ErrWrongPassword {
+		config.Debug("merge: unexpected error: %v", err)
+		_ = os.WriteFile(config.Path(), localBackup, 0600)
+		return
+	}
+
+	config.Debug("merge: different password, prompting user")
+	for attempts := 0; attempts < 3; attempts++ {
+		m := tui.NewUnlockModel(tui.UnlockCloudMerge)
+		p := tea.NewProgram(m, tea.WithAltScreen())
+		result, err := p.Run()
+		if err != nil {
+			_ = os.WriteFile(config.Path(), localBackup, 0600)
+			return
+		}
+		um := result.(tui.UnlockModel)
+		if um.Canceled {
+			config.Debug("merge: user cancelled")
+			_ = os.WriteFile(config.Path(), localBackup, 0600)
+			return
+		}
+
+		remoteVault, err = config.Load(um.Password)
+		if err == vault.ErrWrongPassword {
+			continue
+		}
+		if err != nil {
+			_ = os.WriteFile(config.Path(), localBackup, 0600)
+			return
+		}
+
+		config.Debug("merge: merging vaults with remote password")
+		merged := config.MergeVaults(localVault, remoteVault)
+		masterPass = um.Password
+		_ = config.Save(merged, masterPass)
+		if settings.PasswordCache == "session" {
+			config.CachePassword(masterPass)
+		}
+		cloud.AutoPush()
+		return
+	}
+
+	config.Debug("merge: 3 failed attempts, restoring local vault")
+	_ = os.WriteFile(config.Path(), localBackup, 0600)
 }

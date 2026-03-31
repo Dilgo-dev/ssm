@@ -12,6 +12,7 @@ type UnlockMode int
 const (
 	UnlockLogin UnlockMode = iota
 	UnlockCreate
+	UnlockCloudMerge
 )
 
 type UnlockModel struct {
@@ -110,7 +111,8 @@ func (m UnlockModel) View() string {
 	content.WriteString(titleStyle.Render("  ~ ssm"))
 	content.WriteString("\n\n")
 
-	if m.mode == UnlockCreate {
+	switch m.mode {
+	case UnlockCreate:
 		content.WriteString(normalRow.Render("  Create a master password to encrypt your vault."))
 		content.WriteString("\n\n")
 
@@ -131,7 +133,16 @@ func (m UnlockModel) View() string {
 			dots2 := fieldValue.Render(strings.Repeat("*", len(m.confirm)))
 			content.WriteString(selectedRow.Render("  > ") + label2 + " " + dots2 + fieldCursor.Render("|"))
 		}
-	} else {
+	case UnlockCloudMerge:
+		content.WriteString(normalRow.Render("  Cloud vault uses a different password."))
+		content.WriteString("\n")
+		content.WriteString(normalRow.Render("  Enter your cloud vault password to merge."))
+		content.WriteString("\n\n")
+
+		label := fieldLabelActive.Render("Password")
+		dots := fieldValue.Render(strings.Repeat("*", len(m.password)))
+		content.WriteString(selectedRow.Render("  > ") + label + " " + dots + fieldCursor.Render("|"))
+	default:
 		content.WriteString(normalRow.Render("  Unlock your vault."))
 		content.WriteString("\n\n")
 

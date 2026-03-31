@@ -137,3 +137,31 @@ func Save(v *Vault, masterPass string) error {
 	}
 	return os.Rename(tmp, Path())
 }
+
+func MergeVaults(local, remote *Vault) *Vault {
+	merged := &Vault{}
+
+	connMap := make(map[string]Connection)
+	for _, c := range local.Connections {
+		connMap[c.Name] = c
+	}
+	for _, c := range remote.Connections {
+		connMap[c.Name] = c
+	}
+	for _, c := range connMap {
+		merged.Connections = append(merged.Connections, c)
+	}
+
+	keyMap := make(map[string]SSHKey)
+	for _, k := range local.Keys {
+		keyMap[k.Name] = k
+	}
+	for _, k := range remote.Keys {
+		keyMap[k.Name] = k
+	}
+	for _, k := range keyMap {
+		merged.Keys = append(merged.Keys, k)
+	}
+
+	return merged
+}

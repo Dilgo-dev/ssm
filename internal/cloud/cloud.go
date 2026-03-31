@@ -216,12 +216,6 @@ func AutoPull() {
 	}
 	if err := Pull(cfg); err != nil {
 		config.Debug("auto-pull: %v", err)
-		if config.Exists() {
-			config.Debug("auto-pull: vault not on server, pushing local vault")
-			if err := Push(cfg); err != nil {
-				config.Debug("auto-pull: fallback push failed: %v", err)
-			}
-		}
 	}
 }
 
